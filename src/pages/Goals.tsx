@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmberCard, EmberText, FlickerIn } from '@/components/EmberAnimations';
 
 const statusColors: Record<string, string> = {
   not_started: 'bg-muted text-muted-foreground border border-muted-foreground/20',

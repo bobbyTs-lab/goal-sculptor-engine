@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmberCard, EmberText, EmberStagger, FlickerIn } from '@/components/EmberAnimations';
 
 function RestTimer() {
   const [seconds, setSeconds] = useState(90);
