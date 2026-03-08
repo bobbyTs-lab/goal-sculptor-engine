@@ -3,14 +3,22 @@ import { useWorkouts } from '@/hooks/useWorkouts';
 import { calculateGoalProgress } from '@/types/goals';
 import { getPersonalRecords, getWeeklyVolume } from '@/lib/progressive-overload';
 import { EXERCISE_LABELS } from '@/types/workout';
+import { checkAchievements } from '@/lib/achievements';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Dumbbell, Trophy, TrendingUp } from 'lucide-react';
+import { Target, Dumbbell, Trophy, TrendingUp, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmberCard, EmberStagger, EmberText, FlickerIn } from '@/components/EmberAnimations';
 import { ProgressRing } from '@/components/ProgressRing';
 import { BodyDiagram } from '@/components/BodyDiagram';
 import { MotivationalQuotes } from '@/components/MotivationalQuotes';
-import { loadSettings } from '@/lib/storage';
+import { AchievementSystem } from '@/components/AchievementSystem';
+import { StrengthRadar } from '@/components/StrengthRadar';
+import { loadSettings, loadAchievements, loadWeeklyPlan } from '@/lib/storage';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useMemo } from 'react';
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function Index() {
   const { goals } = useGoals();
@@ -19,6 +27,18 @@ export default function Index() {
   const weeklyVolume = getWeeklyVolume(sessions);
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
   const settings = loadSettings();
+  const unlockedAchievements = loadAchievements();
+
+  const { all: achievements } = checkAchievements(sessions, unlockedAchievements);
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+
+  // Today's workout from plan
+  const todayPlan = useMemo(() => {
+    const plan = loadWeeklyPlan();
+    if (!plan) return null;
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    return plan.days[todayIdx];
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto space-y-10">
@@ -50,12 +70,41 @@ export default function Index() {
         />
       </EmberCard>
 
+      {/* Today's Workout Widget */}
+      {todayPlan && todayPlan.splitDay !== 'rest' && (
+        <EmberCard delay={0.15}>
+          <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80">
+            <CardHeader className="pb-2 relative z-10">
+              <CardTitle className="text-sm font-medieval flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" />
+                Today's Workout — {DAYS[(new Date().getDay() + 6) % 7]}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Badge variant="outline" className="border-primary/30 font-medieval capitalize">{todayPlan.splitDay}</Badge>
+                {todayPlan.exercises.map((ex: string) => (
+                  <Badge key={ex} className="bg-primary/20 text-primary border-primary/30 font-medieval text-xs">
+                    {EXERCISE_LABELS[ex as keyof typeof EXERCISE_LABELS] || ex}
+                  </Badge>
+                ))}
+                <Link to="/workouts" className="ml-auto">
+                  <Button size="sm" className="gradient-alien text-primary-foreground font-bold font-medieval">
+                    ⚔ Start
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </EmberCard>
+      )}
+
       {/* Stats row */}
       <EmberStagger className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { icon: Target, value: goals.length, label: 'Active Goals', color: 'primary', glow: 'glow-green-text' },
           { icon: Dumbbell, value: sessions.length, label: 'Sessions', color: 'primary', glow: 'glow-green-text' },
-          { icon: Trophy, value: prs.length, label: 'Records', color: 'secondary', glow: 'glow-gold-text' },
+          { icon: Trophy, value: `${unlockedCount}/${achievements.length}`, label: 'Badges', color: 'secondary', glow: 'glow-gold-text' },
           { icon: TrendingUp, value: latestVolume.toLocaleString(), label: 'Weekly Vol', color: 'secondary', glow: 'glow-gold-text' },
         ].map((stat, i) => (
           <EmberCard key={stat.label} delay={i * 0.1}>
@@ -70,9 +119,19 @@ export default function Index() {
         ))}
       </EmberStagger>
 
-      {/* Body Diagram */}
-      <EmberCard delay={0.3}>
-        <BodyDiagram prs={prs} />
+      {/* Body Diagram + Strength Radar side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <EmberCard delay={0.3}>
+          <BodyDiagram prs={prs} />
+        </EmberCard>
+        <EmberCard delay={0.35}>
+          <StrengthRadar prs={prs} bodyweight={settings.bodyweight} />
+        </EmberCard>
+      </div>
+
+      {/* Achievement System */}
+      <EmberCard delay={0.4}>
+        <AchievementSystem achievements={achievements} />
       </EmberCard>
 
       {/* Quick links */}

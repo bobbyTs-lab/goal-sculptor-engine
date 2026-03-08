@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History } from 'lucide-react';
+import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History, Save, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmberCard, EmberText, EmberStagger, FlickerIn } from '@/components/EmberAnimations';
+import { loadTemplates, saveTemplates, generateId, WorkoutTemplate } from '@/lib/storage';
 
 function RestTimer() {
   const [seconds, setSeconds] = useState(90);
@@ -73,7 +75,9 @@ export default function WorkoutsPage() {
     exercise: CompoundExercise;
     sets: SetLog[];
   }[]>([]);
+  const [sessionNotes, setSessionNotes] = useState('');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>(() => loadTemplates());
 
   const toggleSession = (id: string) => {
     const next = new Set(expandedSessions);
@@ -111,10 +115,59 @@ export default function WorkoutsPage() {
       exercise: e.exercise,
       sets: e.sets,
       date: new Date().toISOString(),
+      notes: sessionNotes || undefined,
     }));
-    addSession({ date: new Date().toISOString(), splitDay, exercises });
+    addSession({ date: new Date().toISOString(), splitDay, exercises, notes: sessionNotes || undefined });
     setSessionExercises([]);
+    setSessionNotes('');
     toast.success('Session logged! 🔥');
+  };
+
+  // Save as template
+  const saveAsTemplate = () => {
+    if (sessionExercises.length === 0) return;
+    const name = prompt('Template name:');
+    if (!name) return;
+    const template: WorkoutTemplate = {
+      id: generateId(),
+      name,
+      splitDay,
+      exercises: sessionExercises.map(e => ({
+        exercise: e.exercise,
+        sets: e.sets.length,
+        weight: e.sets[0]?.weight || 0,
+        reps: e.sets[0]?.reps || 0,
+      })),
+    };
+    const updated = [...templates, template];
+    setTemplates(updated);
+    saveTemplates(updated);
+    toast.success(`Template "${name}" saved!`);
+  };
+
+  // Load from template
+  const loadFromTemplate = (template: WorkoutTemplate) => {
+    setSplitDay(template.splitDay as SplitDay);
+    const exercises = template.exercises.map(e => {
+      const config = configs.find(c => c.exercise === e.exercise);
+      return {
+        exercise: e.exercise as CompoundExercise,
+        sets: Array.from({ length: e.sets }, () => ({
+          reps: e.reps || config?.repRangeMin || 6,
+          weight: config?.currentWeight || e.weight,
+          rpe: 3,
+        })),
+      };
+    });
+    setSessionExercises(exercises);
+    toast.success(`Loaded template "${template.name}"`);
+  };
+
+  const deleteTemplate = (id: string) => {
+    const updated = templates.filter(t => t.id !== id);
+    setTemplates(updated);
+    saveTemplates(updated);
+    toast.success('Template deleted');
   };
 
   const [selectedExercise, setSelectedExercise] = useState<CompoundExercise>('squat');
@@ -141,6 +194,7 @@ export default function WorkoutsPage() {
       <Tabs defaultValue="session" className="space-y-4">
         <TabsList className="bg-muted/30 border-rough">
           <TabsTrigger value="session" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Log Session</TabsTrigger>
+          <TabsTrigger value="templates" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Templates</TabsTrigger>
           <TabsTrigger value="history" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">History</TabsTrigger>
           <TabsTrigger value="progress" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Progress</TabsTrigger>
           <TabsTrigger value="prs" className="font-medieval data-[state=active]:text-secondary data-[state=active]:glow-gold-text">PRs</TabsTrigger>
@@ -225,9 +279,31 @@ export default function WorkoutsPage() {
           })}
 
           {sessionExercises.length > 0 && (
-            <Button onClick={logSession} className="w-full gradient-alien text-primary-foreground font-bold text-lg py-6 glow-green font-gothic tracking-wide">
-              ⚔ Log Session ⚔
-            </Button>
+            <div className="space-y-3">
+              {/* Session notes */}
+              <Card className="border-rough bg-card/80">
+                <CardContent className="pt-4 relative z-10">
+                  <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" /> Session Notes
+                  </label>
+                  <Textarea
+                    className="mt-1 border-rough h-20 text-xs font-medieval"
+                    placeholder="How did it feel? Any pain? Energy level?"
+                    value={sessionNotes}
+                    onChange={e => setSessionNotes(e.target.value)}
+                  />
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-3">
+                <Button onClick={logSession} className="flex-1 gradient-alien text-primary-foreground font-bold text-lg py-6 glow-green font-gothic tracking-wide">
+                  ⚔ Log Session ⚔
+                </Button>
+                <Button onClick={saveAsTemplate} variant="outline" className="border-rough font-medieval">
+                  <Save className="h-4 w-4 mr-1" /> Save Template
+                </Button>
+              </div>
+            </div>
           )}
 
           {sessionExercises.length === 0 && (
@@ -237,6 +313,49 @@ export default function WorkoutsPage() {
                 <p className="text-muted-foreground font-medieval text-lg">Select exercises above to begin</p>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* TEMPLATES TAB */}
+        <TabsContent value="templates" className="space-y-4">
+          {templates.length === 0 ? (
+            <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Save className="h-16 w-16 text-primary/40 mb-4" />
+                <p className="text-muted-foreground font-medieval text-lg">No templates yet</p>
+                <p className="text-xs text-muted-foreground font-medieval mt-1">Log a session and save it as a template</p>
+              </CardContent>
+            </Card>
+          ) : (
+            templates.map((t, i) => (
+              <EmberCard key={t.id} delay={i * 0.05}>
+                <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
+                  <CardContent className="pt-4 relative z-10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-medieval font-bold">{t.name}</p>
+                        <Badge variant="outline" className="border-primary/30 font-medieval text-xs capitalize mt-1">{t.splitDay}</Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => loadFromTemplate(t)} className="gradient-alien text-primary-foreground font-bold font-medieval text-xs">
+                          Quick Start
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteTemplate(t.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {t.exercises.map((e, j) => (
+                        <Badge key={j} variant="outline" className="border-primary/20 text-xs font-medieval">
+                          {EXERCISE_LABELS[e.exercise as CompoundExercise] || e.exercise} · {e.sets}×{e.reps}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </EmberCard>
+            ))
           )}
         </TabsContent>
 
@@ -281,6 +400,12 @@ export default function WorkoutsPage() {
                       <CollapsibleContent>
                         <CardContent className="pt-0 relative z-10">
                           <div className="divider-alien mb-3" />
+                          {session.notes && (
+                            <div className="text-xs text-muted-foreground font-medieval mb-3 p-2 bg-muted/20 rounded border border-border flex items-start gap-1.5">
+                              <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              {session.notes}
+                            </div>
+                          )}
                           <div className="space-y-3">
                             {session.exercises.map((ex, exIdx) => (
                               <div key={exIdx} className="space-y-1">

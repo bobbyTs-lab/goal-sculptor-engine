@@ -1,4 +1,4 @@
-import { Target, Dumbbell, Home, Settings } from "lucide-react";
+import { Target, Dumbbell, Home, Settings, Calendar } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -17,6 +17,7 @@ import {
 
 const navItems = [
   { title: "Home", url: "/", icon: Home },
+  { title: "Program", url: "/program", icon: Calendar },
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Workouts", url: "/workouts", icon: Dumbbell },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -57,7 +58,6 @@ export function AppSidebar() {
                         className="relative font-medieval text-base tracking-wide transition-all duration-300 hover:bg-muted/50 group"
                         activeClassName="text-primary font-bold"
                       >
-                        {/* Active ember glow bar */}
                         {active && (
                           <motion.div
                             layoutId="sidebar-active-glow"
@@ -69,7 +69,6 @@ export function AppSidebar() {
                           />
                         )}
 
-                        {/* Hover ember glow */}
                         <motion.div
                           className="absolute inset-0 rounded-md pointer-events-none"
                           initial={false}

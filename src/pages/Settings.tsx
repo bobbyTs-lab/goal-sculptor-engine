@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Trash2, Quote, AlertTriangle } from 'lucide-react';
+import { Download, Upload, Trash2, Quote, AlertTriangle, Weight, Volume2 } from 'lucide-react';
 import { exportAllData, importAllData, clearAllData, loadSettings, saveSettings } from '@/lib/storage';
 import { toast } from 'sonner';
 import { EmberCard, FlickerIn } from '@/components/EmberAnimations';
@@ -81,8 +81,54 @@ export default function SettingsPage() {
 
       <div className="divider-alien" />
 
-      {/* Motivational Quotes */}
+      {/* Body Metrics */}
       <EmberCard delay={0}>
+        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-medieval">
+              <Weight className="h-5 w-5 text-primary" /> Body Metrics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 relative z-10">
+            <div className="flex items-center gap-4">
+              <Label className="font-medieval w-32">Bodyweight (lbs)</Label>
+              <Input
+                type="number"
+                value={settings.bodyweight}
+                onChange={e => updateSettings({ bodyweight: Number(e.target.value) })}
+                className="w-32 border-rough"
+                min={50}
+                max={500}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground font-medieval">Used for strength standards comparison and 1RM calculations</p>
+          </CardContent>
+        </Card>
+      </EmberCard>
+
+      {/* Ambient Sound */}
+      <EmberCard delay={0.05}>
+        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-medieval">
+              <Volume2 className="h-5 w-5 text-secondary" /> Ambient Sound
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 relative z-10">
+            <div className="flex items-center justify-between">
+              <Label className="font-medieval">Enable fire ambience toggle in header</Label>
+              <Switch
+                checked={settings.ambientSoundEnabled}
+                onCheckedChange={(checked) => updateSettings({ ambientSoundEnabled: checked })}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground font-medieval">Crackling fire sound generated via Web Audio API — no external files needed</p>
+          </CardContent>
+        </Card>
+      </EmberCard>
+
+      {/* Motivational Quotes */}
+      <EmberCard delay={0.1}>
         <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-medieval">
@@ -115,7 +161,7 @@ export default function SettingsPage() {
       </EmberCard>
 
       {/* Data Management */}
-      <EmberCard delay={0.1}>
+      <EmberCard delay={0.15}>
         <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-medieval">

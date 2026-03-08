@@ -22,6 +22,7 @@ export interface WorkoutSession {
   date: string;
   splitDay: SplitDay;
   exercises: ExerciseLog[];
+  notes?: string;
 }
 
 export interface ExerciseConfig {
