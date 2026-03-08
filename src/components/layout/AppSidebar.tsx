@@ -41,7 +41,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar texture-parchment texture-cracks scanlines-heavy">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="font-gothic text-2xl gradient-alien-text py-4">

@@ -174,7 +174,7 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
           const isExpanded = expandedGoals.has(goal.id);
           return (
             <EmberCard key={goal.id} delay={goalIdx * 0.12}>
-            <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
+            <Card className="border-runic relative overflow-hidden scanlines scanlines-heavy bg-card/80 crt-hover texture-cracks texture-parchment drip-edge patina-stain glitch-hover">
               <Collapsible open={isExpanded} onOpenChange={() => toggle(expandedGoals, goal.id, setExpandedGoals)}>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors relative z-10">

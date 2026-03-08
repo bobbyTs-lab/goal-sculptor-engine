@@ -91,7 +91,7 @@ export default function Index() {
 
         <EmberCard delay={0.15}>
           <Link to="/workouts">
-            <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-gold transition-all duration-500 cursor-pointer group crt-hover">
+            <Card className="border-runic border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-gold transition-all duration-500 cursor-pointer group crt-hover texture-cracks texture-parchment drip-edge patina-stain">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-gold-text transition-all">
                   <Dumbbell className="h-6 w-6 text-secondary drop-shadow-[0_0_8px_hsl(42,100%,50%,0.6)]" /> Workouts
