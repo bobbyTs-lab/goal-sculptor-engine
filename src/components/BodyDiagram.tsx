@@ -150,10 +150,10 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
             <rect x="68" y="42" width="364" height="448" fill="none" stroke="hsl(42 100% 50% / 0.18)" strokeWidth={0.6} />
 
             {/* Golden spiral */}
-            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.1)" strokeWidth={0.5} strokeDasharray="6 10">
+            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.35)" strokeWidth={0.7} strokeDasharray="6 10">
               <path d="M250 260 C250 200,300 180,330 190 C370 200,380 250,370 280 C355 330,310 350,280 345 C250 340,235 310,240 290 C245 270,255 262,250 260" />
             </g>
-            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={0.4} strokeDasharray="5 12" style={{ animationDelay: '1.5s' }}>
+            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.22)" strokeWidth={0.5} strokeDasharray="5 12" style={{ animationDelay: '1.5s' }}>
               <path d="M250 260 C250 320,200 340,170 330 C130 320,120 270,130 240 C145 190,190 170,220 175 C250 180,265 210,260 230 C255 248,250 258,250 260" />
             </g>
 
