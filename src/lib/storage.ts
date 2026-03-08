@@ -15,7 +15,36 @@ const KEYS = {
   WEEKLY_FOCUS: 'goalforge_weekly_focus',
   TIME_BLOCKS: 'goalforge_time_blocks',
   BLOCK_CATEGORIES: 'goalforge_block_categories',
+  REPEATABLE_BLOCKS: 'goalforge_repeatable_blocks',
+  CONTACTS: 'goalforge_contacts',
 } as const;
+
+// Repeatable Block Template
+export type RepeatPattern = 'daily' | 'weekdays' | 'weekends' | 'custom';
+export interface RepeatableBlock {
+  id: string;
+  title: string;
+  categoryId: string;
+  startHour: number;
+  startMinute: number;
+  durationMinutes: number;
+  repeatPattern: RepeatPattern;
+  customDays?: string[]; // e.g. ['Monday', 'Wednesday', 'Friday']
+  enabled: boolean;
+}
+
+// Contact / Person
+export type RelationshipTag = 'family' | 'friend' | 'coworker' | 'mentor' | 'mentee' | 'partner' | 'acquaintance' | 'other';
+export interface Contact {
+  id: string;
+  name: string;
+  relationship: RelationshipTag;
+  phone?: string;
+  email?: string;
+  notes: string;
+  plan: string; // goal/plan for this relationship
+  createdAt: string;
+}
 
 // Time Block Types
 export interface BlockCategory {
@@ -125,6 +154,14 @@ export const saveTimeBlocks = (blocks: TimeBlock[]) => save(KEYS.TIME_BLOCKS, bl
 // Block Categories
 export const loadBlockCategories = (): BlockCategory[] => load(KEYS.BLOCK_CATEGORIES, DEFAULT_CATEGORIES);
 export const saveBlockCategories = (cats: BlockCategory[]) => save(KEYS.BLOCK_CATEGORIES, cats);
+
+// Repeatable Blocks
+export const loadRepeatableBlocks = (): RepeatableBlock[] => load(KEYS.REPEATABLE_BLOCKS, []);
+export const saveRepeatableBlocks = (blocks: RepeatableBlock[]) => save(KEYS.REPEATABLE_BLOCKS, blocks);
+
+// Contacts
+export const loadContacts = (): Contact[] => load(KEYS.CONTACTS, []);
+export const saveContacts = (contacts: Contact[]) => save(KEYS.CONTACTS, contacts);
 
 // Export all data
 export function exportAllData(): string {

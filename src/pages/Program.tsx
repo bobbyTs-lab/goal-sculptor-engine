@@ -23,6 +23,7 @@ import { EmberCard, FlickerIn, EmberStagger } from '@/components/EmberAnimations
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import DailyTimeBlocks from '@/components/DailyTimeBlocks';
+import RepeatableBlockManager from '@/components/RepeatableBlockManager';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -406,6 +407,11 @@ export default function ProgramPage() {
                     </div>
                   </motion.div>
                 )}
+
+                {/* Repeatable Block Templates */}
+                <div className="border border-border/30 rounded-lg p-3 bg-muted/10">
+                  <RepeatableBlockManager />
+                </div>
 
                 {/* Time Block Planner */}
                 <DailyTimeBlocks

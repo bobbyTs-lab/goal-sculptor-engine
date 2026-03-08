@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId } from '@/lib/storage';
+import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId, loadRepeatableBlocks, RepeatableBlock } from '@/lib/storage';
+import { shouldShowOnDay } from '@/components/RepeatableBlockManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Palette, Trash2, Link2, Unlink } from 'lucide-react';
+import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -152,6 +153,35 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
     blocks.filter(b => b.dayName === dayName).sort((a, b) => blockStartMinutes(a) - blockStartMinutes(b)),
     [blocks, dayName]
   );
+
+  // Auto-populate from repeatable templates
+  useEffect(() => {
+    const templates = loadRepeatableBlocks();
+    const applicableTemplates = templates.filter(t => shouldShowOnDay(t, dayName));
+    const existingBlocks = blocks.filter(b => b.dayName === dayName);
+    
+    const newBlocks: TimeBlock[] = [];
+    for (const tpl of applicableTemplates) {
+      // Check if a block with this template's title already exists for this day
+      const alreadyExists = existingBlocks.some(b => 
+        b.title === tpl.title && b.startHour === tpl.startHour && b.startMinute === tpl.startMinute
+      );
+      if (!alreadyExists) {
+        newBlocks.push({
+          id: generateId(),
+          dayName,
+          categoryId: tpl.categoryId,
+          title: tpl.title,
+          startHour: tpl.startHour,
+          startMinute: tpl.startMinute,
+          durationMinutes: tpl.durationMinutes,
+        });
+      }
+    }
+    if (newBlocks.length > 0) {
+      persist([...blocks, ...newBlocks]);
+    }
+  }, [dayName]); // only on day change
 
   const columnLayout = useMemo(() => computeColumns(dayBlocks), [dayBlocks]);
 

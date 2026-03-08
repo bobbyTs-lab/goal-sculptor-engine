@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Goals from "./pages/Goals";
 import Workouts from "./pages/Workouts";
 import Program from "./pages/Program";
+import People from "./pages/People";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ function AnimatedRoutes() {
           <Route path="/goals" element={<Goals />} />
           <Route path="/workouts" element={<Workouts />} />
           <Route path="/program" element={<Program />} />
+          <Route path="/people" element={<People />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
