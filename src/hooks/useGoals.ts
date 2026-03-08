@@ -57,7 +57,7 @@ export function useGoals() {
     }));
   }, [goals, persist]);
 
-  const addTask = useCallback((goalId: string, phaseId: string, title: string, description: string) => {
+  const addTask = useCallback((goalId: string, phaseId: string, title: string, description: string, deadline?: string) => {
     persist(goals.map(g => {
       if (g.id !== goalId) return g;
       return {
@@ -66,7 +66,7 @@ export function useGoals() {
           if (p.id !== phaseId) return p;
           const task: Task = {
             id: generateId(), title, description, status: 'not_started',
-            todos: [], order: p.tasks.length,
+            todos: [], order: p.tasks.length, deadline,
           };
           return { ...p, tasks: [...p.tasks, task] };
         }),
@@ -74,7 +74,7 @@ export function useGoals() {
     }));
   }, [goals, persist]);
 
-  const addToDo = useCallback((goalId: string, phaseId: string, taskId: string, title: string) => {
+  const addToDo = useCallback((goalId: string, phaseId: string, taskId: string, title: string, deadline?: string) => {
     persist(goals.map(g => {
       if (g.id !== goalId) return g;
       return {
