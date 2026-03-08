@@ -17,9 +17,9 @@ export default function Index() {
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10">
+    <div className="max-w-4xl mx-auto space-y-10 relative">
       {/* Hero */}
-      <div className="text-center py-12 relative">
+      <div className="text-center py-12 relative texture-parchment patina-stain">
         <EmberText delay={0}>
           <div className="divider-alien mb-8" />
         </EmberText>
