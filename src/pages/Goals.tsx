@@ -565,23 +565,102 @@ RULES:
       </Dialog>
 
       {/* AI Prompt Dialog */}
-      <Dialog open={!!promptGoal} onOpenChange={() => setPromptGoal(null)}>
-        <DialogContent className="bg-card border-rough max-w-lg">
+      <Dialog open={!!promptGoal} onOpenChange={(open) => { if (!open) { setPromptGoal(null); setParsedResult(null); setAiResponseText(''); setPromptTab('prompt'); } }}>
+        <DialogContent className="bg-card border-rough max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="font-gothic gradient-alien-text text-xl">AI Prompt Generator</DialogTitle>
+            <DialogTitle className="font-gothic gradient-alien-text text-xl">AI Goal Builder</DialogTitle>
           </DialogHeader>
           {promptGoal && (
-            <div className="space-y-4 mt-2">
-              <p className="text-sm text-muted-foreground font-medieval">
-                Copy this prompt and paste it into your AI assistant to generate tasks and to-dos for your goal.
-              </p>
-              <div className="bg-muted/30 p-4 rounded border-rough text-sm whitespace-pre-wrap max-h-64 overflow-auto font-mono text-xs">
-                {generateAIPrompt(promptGoal)}
-              </div>
-              <Button onClick={() => copyPrompt(promptGoal)} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
-                <Copy className="h-4 w-4 mr-2" /> Copy Prompt
-              </Button>
-            </div>
+            <Tabs value={promptTab} onValueChange={setPromptTab} className="flex-1 overflow-hidden flex flex-col">
+              <TabsList className="w-full bg-muted/30 border-rough">
+                <TabsTrigger value="prompt" className="font-medieval flex-1 gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> 1. Copy Prompt
+                </TabsTrigger>
+                <TabsTrigger value="import" className="font-medieval flex-1 gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> 2. Import Response
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="prompt" className="flex-1 overflow-auto space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground font-medieval">
+                  Copy this prompt → paste into ChatGPT / Claude / Gemini → copy the response → switch to Import tab.
+                </p>
+                <div className="bg-muted/30 p-4 rounded border-rough whitespace-pre-wrap max-h-72 overflow-auto font-mono text-xs">
+                  {generateAIPrompt(promptGoal)}
+                </div>
+                <Button onClick={() => copyPrompt(promptGoal)} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+                  <Copy className="h-4 w-4 mr-2" /> Copy Prompt
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="import" className="flex-1 overflow-auto space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground font-medieval">
+                  Paste the AI's response below. It should follow the PHASE / TASK / TODO format.
+                </p>
+                <Textarea
+                  value={aiResponseText}
+                  onChange={e => setAiResponseText(e.target.value)}
+                  placeholder={`PHASE: Foundation | Research and planning | 2026-04-15\n  TASK: Research competitors | Analyze top 5 | 2026-04-01\n    TODO: List features | 2026-03-20\n    TODO: Write comparison | 2026-03-25`}
+                  className="border-rough font-mono text-xs min-h-[120px]"
+                />
+                <Button
+                  onClick={handleParseResponse}
+                  disabled={!aiResponseText.trim()}
+                  variant="outline"
+                  className="w-full border-rough font-medieval"
+                >
+                  Parse Response
+                </Button>
+
+                {/* Parse warnings */}
+                {parsedResult && parsedResult.warnings.length > 0 && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded p-3 space-y-1">
+                    {parsedResult.warnings.map((w, i) => (
+                      <p key={i} className="text-xs text-destructive flex items-center gap-1.5">
+                        <AlertCircle className="h-3 w-3 flex-shrink-0" /> {w}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {/* Parsed preview */}
+                {parsedResult && parsedResult.phases.length > 0 && (
+                  <div className="bg-muted/20 border-rough rounded p-3 space-y-3 max-h-60 overflow-auto">
+                    <p className="text-xs text-muted-foreground font-medieval uppercase tracking-widest">Preview</p>
+                    {parsedResult.phases.map((phase, pi) => (
+                      <div key={pi} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medieval font-bold text-primary">▸ {phase.title}</span>
+                          <Badge variant="outline" className="text-xs">{phase.deadline}</Badge>
+                        </div>
+                        {phase.tasks.map((task, ti) => (
+                          <div key={ti} className="ml-4 space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medieval text-secondary">▸ {task.title}</span>
+                              <span className="text-xs text-muted-foreground">{task.deadline}</span>
+                            </div>
+                            {task.todos.map((todo, tdi) => (
+                              <div key={tdi} className="ml-4 flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">☐ {todo.title}</span>
+                                <span className="text-xs text-muted-foreground/60">{todo.deadline}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Import button */}
+                {parsedResult && parsedResult.phases.length > 0 && (
+                  <Button onClick={handleBulkImport} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos
+                  </Button>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
