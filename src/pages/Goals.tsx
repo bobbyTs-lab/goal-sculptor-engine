@@ -162,7 +162,7 @@ export default function GoalsPage() {
 
     return `You are an expert project planner, systems designer, and skill coach.
 
-Your job is to convert a goal into a structured execution plan with realistic progression and atomic actions.
+Your job is to convert goals into structured execution plans with realistic progression and atomic actions.
 
 The plan must be practical, logically ordered, and deeply thought out.
 
@@ -174,6 +174,31 @@ DEADLINE: ${deadline}
 
 EXISTING PHASES:
 ${phaseList || '  (No phases yet — please generate 3-5 phases)'}
+
+═══════════════════════════════════════
+STEP 1 — INFORMATION GATHERING
+═══════════════════════════════════════
+
+Before creating the plan, ask questions needed to design a high-quality plan.
+
+Ask about:
+- Current skill level or experience
+- Available time per week
+- Access to equipment, tools, or facilities
+- Access to mentors/coaches
+- Constraints or risks
+- Relevant physical or mental prerequisites
+- Environment where the work will occur
+- Whether the goal is casual, serious, or elite level
+
+Wait for the user's answers before continuing.
+Do NOT generate the plan yet.
+
+═══════════════════════════════════════
+STEP 2 — PLAN DESIGN
+═══════════════════════════════════════
+
+After receiving answers, generate the full plan.
 
 The plan must follow this progression model:
 1. Understanding / knowledge
