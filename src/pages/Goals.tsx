@@ -302,6 +302,7 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
                 </CollapsibleContent>
               </Collapsible>
             </Card>
+            </EmberCard>
           );
         })
       )}
