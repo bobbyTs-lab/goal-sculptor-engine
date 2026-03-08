@@ -217,11 +217,11 @@ export default function ProgramPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
       <FlickerIn>
         <div>
-          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Program Builder</h1>
-          <p className="text-muted-foreground mt-1 font-medieval">Plan your week · Balance your splits · Schedule your goals</p>
+          <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Program</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Plan your week · Schedule your goals</p>
         </div>
       </FlickerIn>
 
