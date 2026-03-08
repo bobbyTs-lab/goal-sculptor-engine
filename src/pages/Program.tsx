@@ -414,6 +414,7 @@ export default function ProgramPage() {
                     const todo = allTodos.find(t => t.todoId === todoId);
                     if (todo) handleToggleTodo(todo);
                   }}
+                  backlogTodos={backlog.map(t => ({ todoId: t.todoId, title: t.todoTitle, goalTitle: t.goalTitle }))}
                 />
 
                 {/* Start workout button */}

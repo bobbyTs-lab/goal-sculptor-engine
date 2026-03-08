@@ -1,56 +1,159 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, GripVertical, Settings2, Palette, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { Plus, X, Palette, Trash2, Link2, Unlink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
-const HOURS = Array.from({ length: 18 }, (_, i) => i + 5); // 5 AM to 10 PM
-const SLOT_HEIGHT = 48; // px per 30-min slot
-const HALF_SLOT = SLOT_HEIGHT;
+// 5 AM to 10 PM, 5-minute granularity
+const START_HOUR = 5;
+const END_HOUR = 23; // exclusive
+const MINUTES_PER_PIXEL = 1; // 1 px = 1 minute
+const PIXEL_PER_MINUTE = 1;
+const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
+const TOTAL_HEIGHT = TOTAL_MINUTES * PIXEL_PER_MINUTE;
+const SNAP_MINUTES = 5;
+const LABEL_WIDTH = 56; // px for time labels column
+const MIN_DURATION = 5;
 
-function formatHour(h: number): string {
+function minutesToTop(minutes: number): number {
+  return (minutes - START_HOUR * 60) * PIXEL_PER_MINUTE;
+}
+
+function topToMinutes(top: number): number {
+  return Math.round(top / PIXEL_PER_MINUTE) + START_HOUR * 60;
+}
+
+function snapMinutes(m: number): number {
+  return Math.round(m / SNAP_MINUTES) * SNAP_MINUTES;
+}
+
+function formatTime(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
   const period = h >= 12 ? 'PM' : 'AM';
   const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${display} ${period}`;
+  return m === 0 ? `${display} ${period}` : `${display}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-function getBlockTop(block: TimeBlock): number {
-  const slotIndex = (block.startHour - 5) * 2 + (block.startMinute >= 30 ? 1 : 0);
-  return slotIndex * HALF_SLOT;
+function blockStartMinutes(b: TimeBlock): number {
+  return b.startHour * 60 + b.startMinute;
 }
 
-function getBlockHeight(block: TimeBlock): number {
-  return (block.durationMinutes / 30) * HALF_SLOT;
+function blockEndMinutes(b: TimeBlock): number {
+  return blockStartMinutes(b) + b.durationMinutes;
+}
+
+// Column-packing algorithm for overlapping blocks
+interface LayoutInfo {
+  column: number;
+  totalColumns: number;
+}
+
+function computeColumns(blocks: TimeBlock[]): Map<string, LayoutInfo> {
+  const sorted = [...blocks].sort((a, b) => blockStartMinutes(a) - blockStartMinutes(b));
+  const result = new Map<string, LayoutInfo>();
+  
+  // Assign columns greedily
+  const columns: { endMinute: number; blockId: string }[][] = [];
+  
+  for (const block of sorted) {
+    const start = blockStartMinutes(block);
+    const end = blockEndMinutes(block);
+    
+    // Find first column where this block fits (no overlap)
+    let placed = false;
+    for (let col = 0; col < columns.length; col++) {
+      const lastInCol = columns[col][columns[col].length - 1];
+      if (lastInCol.endMinute <= start) {
+        columns[col].push({ endMinute: end, blockId: block.id });
+        result.set(block.id, { column: col, totalColumns: 0 }); // totalColumns set later
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      columns.push([{ endMinute: end, blockId: block.id }]);
+      result.set(block.id, { column: columns.length - 1, totalColumns: 0 });
+    }
+  }
+
+  // For each block, find how many columns overlap with it
+  for (const block of sorted) {
+    const start = blockStartMinutes(block);
+    const end = blockEndMinutes(block);
+    
+    // Find all blocks that overlap with this one
+    const overlapping = sorted.filter(other => {
+      const oStart = blockStartMinutes(other);
+      const oEnd = blockEndMinutes(other);
+      return oStart < end && oEnd > start;
+    });
+    
+    // The max column index among overlapping blocks + 1
+    let maxCol = 0;
+    for (const o of overlapping) {
+      const info = result.get(o.id);
+      if (info) maxCol = Math.max(maxCol, info.column);
+    }
+    const totalCols = maxCol + 1;
+    
+    // Update all overlapping blocks to share the same totalColumns
+    for (const o of overlapping) {
+      const info = result.get(o.id);
+      if (info) {
+        info.totalColumns = Math.max(info.totalColumns, totalCols);
+      }
+    }
+  }
+
+  // Ensure minimum of 1 column
+  for (const [, info] of result) {
+    if (info.totalColumns === 0) info.totalColumns = 1;
+  }
+
+  return result;
+}
+
+export interface BacklogTodo {
+  todoId: string;
+  title: string;
+  goalTitle: string;
 }
 
 interface DailyTimeBlocksProps {
   dayName: string;
   onToggleTodo?: (todoId: string) => void;
+  backlogTodos?: BacklogTodo[];
 }
 
-export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBlocksProps) {
+export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [] }: DailyTimeBlocksProps) {
   const [blocks, setBlocks] = useState<TimeBlock[]>(() => loadTimeBlocks());
   const [categories, setCategories] = useState<BlockCategory[]>(() => loadBlockCategories());
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('200 70% 50%');
-  const [resizing, setResizing] = useState<{ blockId: string; startY: number; startDuration: number } | null>(null);
+  
+  // Drag state
+  const [dragging, setDragging] = useState<{ blockId: string; offsetMin: number } | null>(null);
+  const [dragPreviewMin, setDragPreviewMin] = useState<number | null>(null);
+  
+  // Resize state
+  const [resizeDrag, setResizeDrag] = useState<{ blockId: string; startY: number; startDuration: number } | null>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
   const dayBlocks = useMemo(() => 
-    blocks.filter(b => b.dayName === dayName).sort((a, b) => {
-      const aMin = a.startHour * 60 + a.startMinute;
-      const bMin = b.startHour * 60 + b.startMinute;
-      return aMin - bMin;
-    }),
+    blocks.filter(b => b.dayName === dayName).sort((a, b) => blockStartMinutes(a) - blockStartMinutes(b)),
     [blocks, dayName]
   );
+
+  const columnLayout = useMemo(() => computeColumns(dayBlocks), [dayBlocks]);
 
   const persist = useCallback((updated: TimeBlock[]) => {
     setBlocks(updated);
@@ -62,15 +165,16 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
     saveBlockCategories(updated);
   }, []);
 
-  const addBlock = useCallback((hour: number, minute: number) => {
+  const addBlock = useCallback((minuteOfDay: number) => {
+    const snapped = snapMinutes(minuteOfDay);
     const newBlock: TimeBlock = {
       id: generateId(),
       dayName,
       categoryId: categories[0]?.id || 'workout',
       title: '',
-      startHour: hour,
-      startMinute: minute,
-      durationMinutes: 60,
+      startHour: Math.floor(snapped / 60),
+      startMinute: snapped % 60,
+      durationMinutes: 30,
     };
     persist([...blocks, newBlock]);
     setEditingBlock(newBlock.id);
@@ -86,26 +190,14 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
     toast.success('Block removed');
   }, [blocks, persist]);
 
-  const moveBlock = useCallback((blockId: string, direction: 'up' | 'down') => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) return;
-    const delta = direction === 'up' ? -30 : 30;
-    const newMinutes = block.startHour * 60 + block.startMinute + delta;
-    if (newMinutes < 300 || newMinutes + block.durationMinutes > 1380) return; // 5AM-11PM bounds
-    updateBlock(blockId, {
-      startHour: Math.floor(newMinutes / 60),
-      startMinute: newMinutes % 60,
-    });
-  }, [blocks, updateBlock]);
+  const linkTodo = useCallback((blockId: string, todoId: string, title: string) => {
+    updateBlock(blockId, { todoId, title });
+    toast.success('Todo linked');
+  }, [updateBlock]);
 
-  const resizeBlock = useCallback((blockId: string, delta: number) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) return;
-    const newDuration = Math.max(30, block.durationMinutes + delta);
-    const endMinutes = block.startHour * 60 + block.startMinute + newDuration;
-    if (endMinutes > 1380) return;
-    updateBlock(blockId, { durationMinutes: newDuration });
-  }, [blocks, updateBlock]);
+  const unlinkTodo = useCallback((blockId: string) => {
+    updateBlock(blockId, { todoId: undefined, title: '' });
+  }, [updateBlock]);
 
   const addCategory = useCallback(() => {
     if (!newCatName.trim()) return;
@@ -121,13 +213,105 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
       return;
     }
     persistCats(categories.filter(c => c.id !== catId));
-    // Remove blocks with this category
     persist(blocks.filter(b => b.categoryId !== catId));
   }, [categories, blocks, persistCats, persist]);
 
   const getCat = (catId: string) => categories.find(c => c.id === catId) || categories[0] || DEFAULT_CATEGORIES[0];
 
-  const totalTimelineHeight = HOURS.length * 2 * HALF_SLOT;
+  // ─── Pointer handlers for drag ───
+  const handleBlockPointerDown = useCallback((e: React.PointerEvent, blockId: string) => {
+    if ((e.target as HTMLElement).closest('[data-resize-handle]') || 
+        (e.target as HTMLElement).closest('input') ||
+        (e.target as HTMLElement).closest('button')) return;
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return;
+    
+    const blockTopMin = blockStartMinutes(block);
+    const pointerMin = topToMinutes(e.clientY - rect.top + (containerRef.current?.scrollTop || 0));
+    const offsetMin = pointerMin - blockTopMin;
+    
+    setDragging({ blockId, offsetMin });
+    setDragPreviewMin(blockTopMin);
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  }, [blocks]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const pointerMin = topToMinutes(e.clientY - rect.top + (containerRef.current?.scrollTop || 0));
+
+    if (dragging) {
+      const rawMin = pointerMin - dragging.offsetMin;
+      const block = blocks.find(b => b.id === dragging.blockId);
+      if (!block) return;
+      const snapped = snapMinutes(Math.max(START_HOUR * 60, Math.min(rawMin, END_HOUR * 60 - block.durationMinutes)));
+      setDragPreviewMin(snapped);
+    }
+    
+    if (resizeDrag) {
+      const block = blocks.find(b => b.id === resizeDrag.blockId);
+      if (!block) return;
+      const startMin = blockStartMinutes(block);
+      const deltaY = e.clientY - resizeDrag.startY;
+      const deltaMin = deltaY / PIXEL_PER_MINUTE;
+      const newDuration = snapMinutes(Math.max(MIN_DURATION, resizeDrag.startDuration + deltaMin));
+      const maxDuration = END_HOUR * 60 - startMin;
+      const clampedDuration = Math.min(newDuration, maxDuration);
+      updateBlock(resizeDrag.blockId, { durationMinutes: clampedDuration });
+    }
+  }, [dragging, resizeDrag, blocks, updateBlock]);
+
+  const handlePointerUp = useCallback(() => {
+    if (dragging && dragPreviewMin !== null) {
+      const snapped = snapMinutes(dragPreviewMin);
+      updateBlock(dragging.blockId, {
+        startHour: Math.floor(snapped / 60),
+        startMinute: snapped % 60,
+      });
+    }
+    setDragging(null);
+    setDragPreviewMin(null);
+    setResizeDrag(null);
+  }, [dragging, dragPreviewMin, updateBlock]);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent, blockId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return;
+    setResizeDrag({ blockId, startY: e.clientY, startDuration: block.durationMinutes });
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  }, [blocks]);
+
+  // Click on empty timeline to add block
+  const handleTimelineClick = useCallback((e: React.MouseEvent) => {
+    if (dragging || resizeDrag) return;
+    if ((e.target as HTMLElement).closest('[data-block]')) return;
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const y = e.clientY - rect.top + (containerRef.current?.scrollTop || 0);
+    const minuteOfDay = topToMinutes(y);
+    if (minuteOfDay >= START_HOUR * 60 && minuteOfDay < END_HOUR * 60) {
+      addBlock(minuteOfDay);
+    }
+  }, [addBlock, dragging, resizeDrag]);
+
+  // Generate hour lines
+  const hourLines = useMemo(() => {
+    const lines = [];
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+      lines.push({ hour: h, top: minutesToTop(h * 60) });
+    }
+    return lines;
+  }, []);
 
   const COLOR_PRESETS = [
     '130 100% 40%', '42 100% 50%', '280 80% 55%', '210 80% 50%',
@@ -137,15 +321,10 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
 
   return (
     <div className="space-y-3">
-      {/* Header controls */}
+      {/* Header */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medieval text-muted-foreground">Tap a time slot to add a block</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto text-xs font-medieval gap-1"
-          onClick={() => setShowCategoryManager(!showCategoryManager)}
-        >
+        <span className="text-xs font-medieval text-muted-foreground">Click timeline to add · Drag to move · Drag bottom to resize</span>
+        <Button variant="ghost" size="sm" className="ml-auto text-xs font-medieval gap-1" onClick={() => setShowCategoryManager(!showCategoryManager)}>
           <Palette className="h-3.5 w-3.5" />
           Categories
         </Button>
@@ -154,12 +333,7 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
       {/* Category manager */}
       <AnimatePresence>
         {showCategoryManager && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
             <div className="border border-border/30 rounded-lg p-3 space-y-3 bg-muted/10">
               <div className="flex flex-wrap gap-1.5">
                 {categories.map(cat => (
@@ -175,13 +349,7 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
                 ))}
               </div>
               <div className="flex items-center gap-2">
-                <Input
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  placeholder="New category..."
-                  className="h-7 text-xs flex-1"
-                  onKeyDown={(e) => e.key === 'Enter' && addCategory()}
-                />
+                <Input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="New category..." className="h-7 text-xs flex-1" onKeyDown={(e) => e.key === 'Enter' && addCategory()} />
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="w-7 h-7 rounded border border-border/30 flex-shrink-0" style={{ backgroundColor: `hsl(${newCatColor})` }} />
@@ -189,12 +357,7 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
                   <PopoverContent className="w-auto p-2" align="end">
                     <div className="grid grid-cols-5 gap-1.5">
                       {COLOR_PRESETS.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => setNewCatColor(c)}
-                          className={`w-6 h-6 rounded-sm border-2 transition-all ${c === newCatColor ? 'border-foreground scale-110' : 'border-transparent'}`}
-                          style={{ backgroundColor: `hsl(${c})` }}
-                        />
+                        <button key={c} onClick={() => setNewCatColor(c)} className={`w-6 h-6 rounded-sm border-2 transition-all ${c === newCatColor ? 'border-foreground scale-110' : 'border-transparent'}`} style={{ backgroundColor: `hsl(${c})` }} />
                       ))}
                     </div>
                   </PopoverContent>
@@ -208,81 +371,73 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
         )}
       </AnimatePresence>
 
-      {/* Category legend - quick add */}
+      {/* Category legend */}
       <div className="flex flex-wrap gap-1">
         {categories.map(cat => (
-          <Badge
-            key={cat.id}
-            variant="outline"
-            className="text-[10px] font-medieval cursor-default"
-            style={{ 
-              backgroundColor: `hsl(${cat.color} / 0.15)`,
-              borderColor: `hsl(${cat.color} / 0.4)`,
-              color: `hsl(${cat.color})`,
-            }}
-          >
+          <Badge key={cat.id} variant="outline" className="text-[10px] font-medieval cursor-default" style={{ backgroundColor: `hsl(${cat.color} / 0.15)`, borderColor: `hsl(${cat.color} / 0.4)`, color: `hsl(${cat.color})` }}>
             {cat.name}
           </Badge>
         ))}
       </div>
 
       {/* TIMELINE */}
-      <div className="relative border border-border/30 rounded-lg overflow-hidden bg-card/30" ref={containerRef}>
-        <div className="relative" style={{ height: totalTimelineHeight }}>
+      <div
+        ref={containerRef}
+        className="relative border border-border/30 rounded-lg overflow-y-auto bg-card/30 select-none"
+        style={{ height: 500, cursor: dragging ? 'grabbing' : 'default' }}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onClick={handleTimelineClick}
+      >
+        <div className="relative" style={{ height: TOTAL_HEIGHT }}>
           {/* Hour lines & labels */}
-          {HOURS.map((hour) => {
-            const yPos = (hour - 5) * 2 * HALF_SLOT;
-            return (
-              <div key={hour} className="absolute left-0 right-0" style={{ top: yPos }}>
-                {/* Full hour line */}
-                <div className="flex items-start">
-                  <span className="w-14 text-[10px] font-medieval text-muted-foreground text-right pr-2 -mt-1.5 flex-shrink-0">
-                    {formatHour(hour)}
-                  </span>
-                  <div className="flex-1 border-t border-border/30" />
-                </div>
-                {/* Half hour line */}
-                <div className="absolute left-14 right-0 border-t border-border/10" style={{ top: HALF_SLOT }} />
-                
-                {/* Clickable slots */}
-                <button
-                  onClick={() => addBlock(hour, 0)}
-                  className="absolute left-14 right-0 hover:bg-primary/5 transition-colors cursor-pointer"
-                  style={{ top: 0, height: HALF_SLOT }}
-                />
-                <button
-                  onClick={() => addBlock(hour, 30)}
-                  className="absolute left-14 right-0 hover:bg-primary/5 transition-colors cursor-pointer"
-                  style={{ top: HALF_SLOT, height: HALF_SLOT }}
-                />
+          {hourLines.map(({ hour, top }) => (
+            <div key={hour} className="absolute left-0 right-0" style={{ top }}>
+              <div className="flex items-start">
+                <span className="text-[10px] font-medieval text-muted-foreground text-right pr-2 -mt-1.5 flex-shrink-0" style={{ width: LABEL_WIDTH }}>
+                  {formatTime(hour * 60)}
+                </span>
+                <div className="flex-1 border-t border-border/30" />
               </div>
-            );
-          })}
+              {/* 30-min dashed line */}
+              <div className="absolute right-0 border-t border-dashed border-border/15" style={{ top: 30 * PIXEL_PER_MINUTE, left: LABEL_WIDTH }} />
+            </div>
+          ))}
 
           {/* Time Blocks */}
           {dayBlocks.map((block) => {
             const cat = getCat(block.categoryId);
-            const top = getBlockTop(block);
-            const height = getBlockHeight(block);
+            const layout = columnLayout.get(block.id) || { column: 0, totalColumns: 1 };
+            const isDragging = dragging?.blockId === block.id;
             const isEditing = editingBlock === block.id;
+            
+            const startMin = isDragging && dragPreviewMin !== null ? dragPreviewMin : blockStartMinutes(block);
+            const top = minutesToTop(startMin);
+            const height = Math.max(block.durationMinutes * PIXEL_PER_MINUTE, MIN_DURATION * PIXEL_PER_MINUTE);
+            
+            const availableWidth = `calc(100% - ${LABEL_WIDTH + 8}px)`;
+            const colWidth = `calc(${availableWidth} / ${layout.totalColumns})`;
+            const colLeft = `calc(${LABEL_WIDTH}px + ${availableWidth} * ${layout.column} / ${layout.totalColumns})`;
 
             return (
-              <motion.div
+              <div
                 key={block.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`absolute left-16 right-2 rounded-md border-l-4 cursor-pointer transition-shadow ${isEditing ? 'z-20 ring-1 ring-foreground/20' : 'z-10 hover:shadow-lg'}`}
+                data-block
+                className={`absolute rounded-md border-l-4 transition-shadow ${isDragging ? 'z-30 opacity-80 scale-[1.02] shadow-xl cursor-grabbing' : isEditing ? 'z-20 ring-1 ring-foreground/20' : 'z-10 hover:shadow-lg cursor-grab'}`}
                 style={{
                   top,
-                  height: Math.max(height, 36),
+                  height,
+                  left: colLeft,
+                  width: colWidth,
                   backgroundColor: `hsl(${cat.color} / 0.2)`,
                   borderLeftColor: `hsl(${cat.color})`,
+                  touchAction: 'none',
                 }}
-                onClick={() => setEditingBlock(isEditing ? null : block.id)}
+                onPointerDown={(e) => handleBlockPointerDown(e, block.id)}
+                onClick={(e) => { e.stopPropagation(); setEditingBlock(isEditing ? null : block.id); }}
               >
-                <div className="px-2 py-1 h-full flex flex-col justify-between overflow-hidden">
-                  <div className="flex items-start gap-1.5">
+                <div className="px-2 py-1 h-full flex flex-col overflow-hidden">
+                  <div className="flex items-start gap-1.5 min-h-0">
                     {block.todoId && onToggleTodo && (
                       <Checkbox
                         checked={block.done || false}
@@ -312,40 +467,51 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
                   </div>
 
                   {/* Time label */}
-                  {height >= 40 && (
-                    <span className="text-[9px] font-medieval text-muted-foreground">
-                      {formatHour(block.startHour)}{block.startMinute > 0 ? ':30' : ''} — {(() => {
-                        const endMin = block.startHour * 60 + block.startMinute + block.durationMinutes;
-                        const endH = Math.floor(endMin / 60);
-                        const endM = endMin % 60;
-                        return `${formatHour(endH)}${endM > 0 ? ':30' : ''}`;
-                      })()}
+                  {height >= 30 && (
+                    <span className="text-[9px] font-medieval text-muted-foreground mt-auto">
+                      {formatTime(blockStartMinutes(block))} — {formatTime(blockEndMinutes(block))}
                     </span>
                   )}
                 </div>
 
-                {/* Edit controls overlay */}
+                {/* Edit controls */}
                 <AnimatePresence>
                   {isEditing && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute -right-1 top-0 bottom-0 flex flex-col items-center justify-center gap-1 pr-1"
+                      className="absolute -right-1 top-0 flex flex-col items-center gap-1 pr-1 pt-1 z-40"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <button onClick={() => moveBlock(block.id, 'up')} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50">
-                        <ChevronUp className="h-3 w-3" />
-                      </button>
-                      <button onClick={() => moveBlock(block.id, 'down')} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50">
-                        <ChevronDown className="h-3 w-3" />
-                      </button>
-                      <button onClick={() => resizeBlock(block.id, 30)} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50 text-[8px] font-bold">
-                        +
-                      </button>
-                      <button onClick={() => resizeBlock(block.id, -30)} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50 text-[8px] font-bold">
-                        −
-                      </button>
+                      {/* Link todo */}
+                      {!block.todoId && backlogTodos.length > 0 && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50">
+                              <Link2 className="h-3 w-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-2 max-h-48 overflow-y-auto" align="end">
+                            <p className="text-[10px] font-medieval text-muted-foreground mb-1">Link a todo</p>
+                            {backlogTodos.map(t => (
+                              <button
+                                key={t.todoId}
+                                onClick={() => linkTodo(block.id, t.todoId, t.title)}
+                                className="w-full text-left px-2 py-1 text-xs font-medieval rounded hover:bg-primary/10 transition-colors truncate"
+                              >
+                                <span className="text-[9px] text-muted-foreground">{t.goalTitle}</span>
+                                <br />{t.title}
+                              </button>
+                            ))}
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                      {block.todoId && (
+                        <button onClick={() => unlinkTodo(block.id)} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50" title="Unlink todo">
+                          <Unlink className="h-3 w-3" />
+                        </button>
+                      )}
                       <button onClick={() => deleteBlock(block.id)} className="p-0.5 rounded bg-destructive/20 border border-destructive/30 hover:bg-destructive/40">
                         <Trash2 className="h-3 w-3 text-destructive" />
                       </button>
@@ -353,12 +519,12 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
                   )}
                 </AnimatePresence>
 
-                {/* Category picker when editing */}
+                {/* Category picker */}
                 {isEditing && (
                   <motion.div
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute left-0 right-0 -bottom-8 flex gap-1 px-1 z-30"
+                    className="absolute left-0 right-0 -bottom-7 flex gap-1 px-1 z-30"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {categories.map(c => (
@@ -372,7 +538,16 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo }: DailyTimeBloc
                     ))}
                   </motion.div>
                 )}
-              </motion.div>
+
+                {/* Resize handle at bottom */}
+                <div
+                  data-resize-handle
+                  className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize group"
+                  onPointerDown={(e) => handleResizePointerDown(e, block.id)}
+                >
+                  <div className="mx-auto w-8 h-1 rounded-full bg-foreground/20 group-hover:bg-foreground/40 transition-colors mt-0.5" />
+                </div>
+              </div>
             );
           })}
         </div>
