@@ -135,10 +135,87 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
       <CardContent className="relative z-10">
         <div className="flex items-start gap-4">
           <svg viewBox="0 0 500 500" className="w-56 h-56 md:w-64 md:h-64 mx-auto flex-shrink-0">
+            <defs>
+              {/* Animated dash for golden spiral */}
+              <style>{`
+                @keyframes dash-flow {
+                  to { stroke-dashoffset: -40; }
+                }
+                .spiral-line {
+                  animation: dash-flow 3s linear infinite;
+                }
+                @keyframes tick-fade {
+                  0%, 100% { opacity: 0.15; }
+                  50% { opacity: 0.4; }
+                }
+                .tick-mark {
+                  animation: tick-fade 4s ease-in-out infinite;
+                }
+              `}</style>
+            </defs>
+
             {/* Vitruvian circle */}
             <circle cx="250" cy="250" r="220" fill="none" stroke="hsl(130 100% 40% / 0.08)" strokeWidth={1} />
             {/* Vitruvian square */}
             <rect x="80" y="48" width="340" height="420" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={1} rx="2" />
+
+            {/* Golden ratio spiral — approximated with arcs */}
+            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.12)" strokeWidth={0.7} strokeDasharray="8 12">
+              <path d="M 250 250 
+                Q 250 180, 310 180 
+                Q 370 180, 370 240 
+                Q 370 320, 300 340 
+                Q 230 360, 210 300 
+                Q 190 240, 230 220 
+                Q 260 200, 270 230 
+                Q 280 255, 258 260 
+                Q 240 265, 245 250" />
+            </g>
+            {/* Secondary spiral — mirrored, offset phase */}
+            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.07)" strokeWidth={0.5} strokeDasharray="6 14" style={{ animationDelay: '1.5s' }}>
+              <path d="M 250 250 
+                Q 250 320, 190 320 
+                Q 130 320, 130 260 
+                Q 130 180, 200 160 
+                Q 270 140, 290 200 
+                Q 310 260, 270 280 
+                Q 240 300, 230 270 
+                Q 220 245, 242 240 
+                Q 260 235, 255 250" />
+            </g>
+
+            {/* Measurement tick marks along circle */}
+            {Array.from({ length: 36 }).map((_, i) => {
+              const angle = (i * 10) * Math.PI / 180;
+              const r1 = 216;
+              const r2 = i % 3 === 0 ? 228 : 224;
+              const x1 = 250 + r1 * Math.cos(angle);
+              const y1 = 250 + r1 * Math.sin(angle);
+              const x2 = 250 + r2 * Math.cos(angle);
+              const y2 = 250 + r2 * Math.sin(angle);
+              return (
+                <line key={`tick-c-${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke="hsl(42 100% 50% / 0.2)" strokeWidth={i % 3 === 0 ? 0.8 : 0.4}
+                  className="tick-mark" style={{ animationDelay: `${i * 0.1}s` }} />
+              );
+            })}
+
+            {/* Measurement tick marks along square edges (top & bottom) */}
+            {Array.from({ length: 18 }).map((_, i) => {
+              const x = 80 + (i + 1) * (340 / 19);
+              return (
+                <g key={`tick-s-${i}`} className="tick-mark" style={{ animationDelay: `${i * 0.15}s` }}>
+                  <line x1={x} y1={48} x2={x} y2={i % 3 === 0 ? 56 : 52}
+                    stroke="hsl(42 100% 50% / 0.15)" strokeWidth={i % 3 === 0 ? 0.7 : 0.3} />
+                  <line x1={x} y1={468} x2={x} y2={i % 3 === 0 ? 460 : 464}
+                    stroke="hsl(42 100% 50% / 0.15)" strokeWidth={i % 3 === 0 ? 0.7 : 0.3} />
+                </g>
+              );
+            })}
+
+            {/* Proportion lines — Da Vinci measurement guides */}
+            <line x1="250" y1="30" x2="250" y2="470" stroke="hsl(42 100% 50% / 0.04)" strokeWidth={0.5} strokeDasharray="4 8" />
+            <line x1="60" y1="250" x2="440" y2="250" stroke="hsl(42 100% 50% / 0.04)" strokeWidth={0.5} strokeDasharray="4 8" />
 
             {/* === BODY — Arms outstretched, classical proportions === */}
 
