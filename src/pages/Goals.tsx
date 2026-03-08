@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGoals } from '@/hooks/useGoals';
+import { generateId } from '@/lib/storage';
 import { Goal, calculateGoalProgress, calculatePhaseProgress, calculateTaskProgress, deriveTaskStatus, getDaysRemaining, getUrgencyClass, getUrgencyColor } from '@/types/goals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +10,62 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmberCard, EmberText, FlickerIn } from '@/components/EmberAnimations';
 import { ProgressRing } from '@/components/ProgressRing';
+
+// --- Parser types ---
+interface ParsedTodo { title: string; deadline: string; }
+interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; }
+interface ParsedPhase { title: string; description: string; deadline: string; tasks: ParsedTask[]; }
+interface ParseResult { phases: ParsedPhase[]; warnings: string[]; }
+
+function parseAIResponse(text: string): ParseResult {
+  const lines = text.split('\n');
+  const phases: ParsedPhase[] = [];
+  let currentPhase: ParsedPhase | null = null;
+  let currentTask: ParsedTask | null = null;
+  const warnings: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+
+    const phaseMatch = trimmed.match(/^PHASE:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    if (phaseMatch) {
+      currentPhase = { title: phaseMatch[1].trim(), description: phaseMatch[2].trim(), deadline: phaseMatch[3], tasks: [] };
+      phases.push(currentPhase);
+      currentTask = null;
+      continue;
+    }
+
+    const taskMatch = trimmed.match(/^TASK:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    if (taskMatch) {
+      if (!currentPhase) { warnings.push(`Line ${i + 1}: TASK found before any PHASE, skipped`); continue; }
+      currentTask = { title: taskMatch[1].trim(), description: taskMatch[2].trim(), deadline: taskMatch[3], todos: [] };
+      currentPhase.tasks.push(currentTask);
+      continue;
+    }
+
+    const todoMatch = trimmed.match(/^TODO:\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    if (todoMatch) {
+      if (!currentTask) { warnings.push(`Line ${i + 1}: TODO found before any TASK, skipped`); continue; }
+      currentTask.todos.push({ title: todoMatch[1].trim(), deadline: todoMatch[2] });
+      continue;
+    }
+
+    // Skip non-matching lines silently (comments, blank formatting etc.)
+  }
+
+  if (phases.length === 0) {
+    warnings.push('No PHASE: lines found. Make sure the AI response follows the exact format.');
+  }
+
+  return { phases, warnings };
+}
 
 const statusColors: Record<string, string> = {
   not_started: 'bg-muted text-muted-foreground border border-muted-foreground/20',
@@ -41,7 +94,7 @@ function DeadlineBadge({ deadline }: { deadline?: string }) {
 
 export default function GoalsPage() {
   const {
-    goals, addGoal, deleteGoal,
+    goals, addGoal, updateGoal, deleteGoal,
     addPhase, deletePhase,
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
@@ -61,6 +114,9 @@ export default function GoalsPage() {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDeadline, setNewTodoDeadline] = useState('');
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
+  const [aiResponseText, setAiResponseText] = useState('');
+  const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
+  const [promptTab, setPromptTab] = useState('prompt');
 
   const toggle = (set: Set<string>, id: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
@@ -100,30 +156,123 @@ export default function GoalsPage() {
   };
 
   const generateAIPrompt = (goal: Goal) => {
-    const phaseList = goal.phases.map((p, i) => `Phase ${i + 1}: "${p.title}" - ${p.description}`).join('\n');
-    return `I have a goal: "${goal.title}"
-End goal: "${goal.endGoal}"
-Description: ${goal.description}
+    const phaseList = goal.phases.map((p, i) => `  - Phase ${i + 1}: "${p.title}" — ${p.description}${p.deadline ? ` (deadline: ${p.deadline})` : ''}`).join('\n');
+    const today = new Date().toISOString().split('T')[0];
+    const deadline = goal.deadline || '(no deadline set)';
 
-I've broken it into these phases:
-${phaseList || '(No phases yet - add phases first!)'}
+    return `You are a project planning assistant. I need you to generate a detailed, dated plan for my goal.
 
-For each phase, please generate:
-1. A list of specific, actionable Tasks (3-7 per phase)
-2. For each Task, a list of granular To-Do items (2-5 per task)
+GOAL: "${goal.title}"
+DESCRIPTION: ${goal.description}
+END GOAL VISION: ${goal.endGoal}
+TODAY'S DATE: ${today}
+DEADLINE: ${deadline}
 
-Format your response as:
-Phase: [phase name]
-  Task: [task name] - [brief description]
-    - To-Do: [specific action item]
-    - To-Do: [specific action item]
+EXISTING PHASES:
+${phaseList || '  (No phases yet — please generate 3-5 phases)'}
 
-Keep tasks concrete and measurable. To-dos should be small enough to complete in one sitting.`;
+INSTRUCTIONS:
+- For each phase, generate 3-7 specific, actionable TASKs.
+- For each TASK, generate 2-5 granular TODO items.
+- EVERY item MUST have a deadline in YYYY-MM-DD format, distributed evenly between ${today} and ${deadline}.
+- Phase deadlines should divide the timeline into roughly equal segments.
+- Task deadlines should fall within their parent phase's timeline.
+- Todo deadlines should fall within their parent task's timeline.
+
+YOU MUST USE THIS EXACT FORMAT (pipe-separated, one item per line):
+
+PHASE: Phase Title | Phase description | YYYY-MM-DD
+  TASK: Task Title | Task description | YYYY-MM-DD
+    TODO: Todo item title | YYYY-MM-DD
+    TODO: Another todo item | YYYY-MM-DD
+  TASK: Another Task | Description here | YYYY-MM-DD
+    TODO: Sub-item | YYYY-MM-DD
+
+RULES:
+- Lines must start with PHASE:, TASK:, or TODO: (with proper indentation)
+- Use | (pipe) to separate fields
+- Dates MUST be valid YYYY-MM-DD format
+- Do NOT add any other text, headers, or commentary
+- Tasks should be concrete and measurable
+- Todos should be completable in one sitting`;
   };
 
   const copyPrompt = (goal: Goal) => {
     navigator.clipboard.writeText(generateAIPrompt(goal));
     toast.success('AI prompt copied to clipboard!');
+  };
+
+  const handleParseResponse = () => {
+    const result = parseAIResponse(aiResponseText);
+    setParsedResult(result);
+    if (result.phases.length > 0) {
+      toast.success(`Parsed ${result.phases.length} phases!`);
+    }
+  };
+
+  // Bulk import: directly build and persist all data at once
+  const handleBulkImport = () => {
+    if (!promptGoal || !parsedResult) return;
+
+    // Use the updateGoal approach - build the full phases array
+    const goal = goals.find(g => g.id === promptGoal.id);
+    if (!goal) return;
+
+    let totalTasks = 0, totalTodos = 0;
+
+    // For each parsed phase, either merge into existing or create new
+    const updatedPhases = [...goal.phases];
+
+    for (const pp of parsedResult.phases) {
+      const existingIdx = updatedPhases.findIndex(p => p.title.toLowerCase() === pp.title.toLowerCase());
+
+      const tasks = pp.tasks.map((pt, ti) => ({
+        id: generateId(),
+        title: pt.title,
+        description: pt.description,
+        status: 'not_started' as const,
+        deadline: pt.deadline,
+        order: ti,
+        todos: pt.todos.map((ptd, tdi) => ({
+          id: generateId(),
+          title: ptd.title,
+          done: false,
+          order: tdi,
+          deadline: ptd.deadline,
+        })),
+      }));
+
+      totalTasks += tasks.length;
+      totalTodos += tasks.reduce((sum, t) => sum + t.todos.length, 0);
+
+      if (existingIdx >= 0) {
+        // Merge tasks into existing phase
+        const existing = updatedPhases[existingIdx];
+        updatedPhases[existingIdx] = {
+          ...existing,
+          deadline: existing.deadline || pp.deadline,
+          tasks: [...existing.tasks, ...tasks.map((t, i) => ({ ...t, order: existing.tasks.length + i }))],
+        };
+      } else {
+        // Create new phase
+        updatedPhases.push({
+          id: generateId(),
+          title: pp.title,
+          description: pp.description,
+          deadline: pp.deadline,
+          tasks,
+          order: updatedPhases.length,
+        });
+      }
+    }
+
+    // Use updateGoal to persist everything at once
+    updateGoal(promptGoal.id, { phases: updatedPhases });
+
+    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos! ⚔`);
+    setParsedResult(null);
+    setAiResponseText('');
+    setPromptGoal(null);
   };
 
   return (
@@ -372,23 +521,102 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
       </Dialog>
 
       {/* AI Prompt Dialog */}
-      <Dialog open={!!promptGoal} onOpenChange={() => setPromptGoal(null)}>
-        <DialogContent className="bg-card border-rough max-w-lg">
+      <Dialog open={!!promptGoal} onOpenChange={(open) => { if (!open) { setPromptGoal(null); setParsedResult(null); setAiResponseText(''); setPromptTab('prompt'); } }}>
+        <DialogContent className="bg-card border-rough max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="font-gothic gradient-alien-text text-xl">AI Prompt Generator</DialogTitle>
+            <DialogTitle className="font-gothic gradient-alien-text text-xl">AI Goal Builder</DialogTitle>
           </DialogHeader>
           {promptGoal && (
-            <div className="space-y-4 mt-2">
-              <p className="text-sm text-muted-foreground font-medieval">
-                Copy this prompt and paste it into your AI assistant to generate tasks and to-dos for your goal.
-              </p>
-              <div className="bg-muted/30 p-4 rounded border-rough text-sm whitespace-pre-wrap max-h-64 overflow-auto font-mono text-xs">
-                {generateAIPrompt(promptGoal)}
-              </div>
-              <Button onClick={() => copyPrompt(promptGoal)} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
-                <Copy className="h-4 w-4 mr-2" /> Copy Prompt
-              </Button>
-            </div>
+            <Tabs value={promptTab} onValueChange={setPromptTab} className="flex-1 overflow-hidden flex flex-col">
+              <TabsList className="w-full bg-muted/30 border-rough">
+                <TabsTrigger value="prompt" className="font-medieval flex-1 gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> 1. Copy Prompt
+                </TabsTrigger>
+                <TabsTrigger value="import" className="font-medieval flex-1 gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> 2. Import Response
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="prompt" className="flex-1 overflow-auto space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground font-medieval">
+                  Copy this prompt → paste into ChatGPT / Claude / Gemini → copy the response → switch to Import tab.
+                </p>
+                <div className="bg-muted/30 p-4 rounded border-rough whitespace-pre-wrap max-h-72 overflow-auto font-mono text-xs">
+                  {generateAIPrompt(promptGoal)}
+                </div>
+                <Button onClick={() => copyPrompt(promptGoal)} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+                  <Copy className="h-4 w-4 mr-2" /> Copy Prompt
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="import" className="flex-1 overflow-auto space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground font-medieval">
+                  Paste the AI's response below. It should follow the PHASE / TASK / TODO format.
+                </p>
+                <Textarea
+                  value={aiResponseText}
+                  onChange={e => setAiResponseText(e.target.value)}
+                  placeholder={`PHASE: Foundation | Research and planning | 2026-04-15\n  TASK: Research competitors | Analyze top 5 | 2026-04-01\n    TODO: List features | 2026-03-20\n    TODO: Write comparison | 2026-03-25`}
+                  className="border-rough font-mono text-xs min-h-[120px]"
+                />
+                <Button
+                  onClick={handleParseResponse}
+                  disabled={!aiResponseText.trim()}
+                  variant="outline"
+                  className="w-full border-rough font-medieval"
+                >
+                  Parse Response
+                </Button>
+
+                {/* Parse warnings */}
+                {parsedResult && parsedResult.warnings.length > 0 && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded p-3 space-y-1">
+                    {parsedResult.warnings.map((w, i) => (
+                      <p key={i} className="text-xs text-destructive flex items-center gap-1.5">
+                        <AlertCircle className="h-3 w-3 flex-shrink-0" /> {w}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {/* Parsed preview */}
+                {parsedResult && parsedResult.phases.length > 0 && (
+                  <div className="bg-muted/20 border-rough rounded p-3 space-y-3 max-h-60 overflow-auto">
+                    <p className="text-xs text-muted-foreground font-medieval uppercase tracking-widest">Preview</p>
+                    {parsedResult.phases.map((phase, pi) => (
+                      <div key={pi} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medieval font-bold text-primary">▸ {phase.title}</span>
+                          <Badge variant="outline" className="text-xs">{phase.deadline}</Badge>
+                        </div>
+                        {phase.tasks.map((task, ti) => (
+                          <div key={ti} className="ml-4 space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medieval text-secondary">▸ {task.title}</span>
+                              <span className="text-xs text-muted-foreground">{task.deadline}</span>
+                            </div>
+                            {task.todos.map((todo, tdi) => (
+                              <div key={tdi} className="ml-4 flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">☐ {todo.title}</span>
+                                <span className="text-xs text-muted-foreground/60">{todo.deadline}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Import button */}
+                {parsedResult && parsedResult.phases.length > 0 && (
+                  <Button onClick={handleBulkImport} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos
+                  </Button>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
