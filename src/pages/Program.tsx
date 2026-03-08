@@ -327,7 +327,7 @@ export default function ProgramPage() {
         })}
       </div>
 
-      {/* EXPANDED DAY PANEL */}
+      {/* EXPANDED DAY PANEL — Time Block Planner */}
       <AnimatePresence mode="wait">
         {expandedDay !== null && (
           <motion.div
@@ -345,88 +345,85 @@ export default function ProgramPage() {
                   {expandedDay === todayIdx && (
                     <Badge variant="outline" className="text-[10px] border-primary/40 text-primary ml-2">TODAY</Badge>
                   )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="ml-auto text-xs font-medieval"
-                    onClick={() => setEditingWorkout(!editingWorkout)}
-                  >
-                    {editingWorkout ? 'Done' : 'Edit Workout'}
-                  </Button>
+                  <div className="ml-auto flex items-center gap-2">
+                    {plan[expandedDay].splitDay !== 'rest' && (
+                      <Badge variant="outline" className={`capitalize text-[10px] ${SPLIT_COLORS[plan[expandedDay].splitDay]}`}>
+                        <Dumbbell className="h-3 w-3 mr-1" />
+                        {plan[expandedDay].splitDay} · {plan[expandedDay].exercises.length} exercises
+                      </Badge>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs font-medieval"
+                      onClick={() => setEditingWorkout(!editingWorkout)}
+                    >
+                      {editingWorkout ? 'Done' : 'Edit Split'}
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* LEFT: Workout */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-medieval text-muted-foreground border-b border-border/30 pb-1">
-                      <Dumbbell className="h-3.5 w-3.5" /> WORKOUT
-                    </div>
-                    {plan[expandedDay].splitDay === 'rest' ? (
-                      <p className="text-xs text-muted-foreground font-medieval italic">Rest day 🧘</p>
-                    ) : (
-                      <div className="space-y-2">
-                        <Badge variant="outline" className={`capitalize text-xs ${SPLIT_COLORS[plan[expandedDay].splitDay]}`}>
-                          {plan[expandedDay].splitDay}
-                        </Badge>
-                        <div className="flex flex-wrap gap-1.5">
-                          {plan[expandedDay].exercises.map(ex => (
-                            <Badge key={ex} variant="outline" className="border-primary/30 text-xs font-medieval group">
-                              {EXERCISE_LABELS[ex]}
-                              {editingWorkout && (
-                                <button onClick={() => removeExercise(expandedDay, ex)} className="ml-1 opacity-50 group-hover:opacity-100">
-                                  <X className="h-3 w-3" />
-                                </button>
-                              )}
-                            </Badge>
+              <CardContent className="relative z-10 space-y-4">
+                {/* Quick workout editor */}
+                {editingWorkout && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="border border-border/30 rounded-lg p-3 bg-muted/10 space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Select value={plan[expandedDay].splitDay} onValueChange={(v) => updateDay(expandedDay, { splitDay: v as SplitDay })}>
+                        <SelectTrigger className="w-32 h-8 border-rough text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SPLIT_OPTIONS.map(s => (
+                            <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
                           ))}
-                        </div>
-                        {editingWorkout && (
-                          <div className="space-y-2 pt-2 border-t border-border/20">
-                            <Select value={plan[expandedDay].splitDay} onValueChange={(v) => updateDay(expandedDay, { splitDay: v as SplitDay })}>
-                              <SelectTrigger className="w-32 h-8 border-rough text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {SPLIT_OPTIONS.map(s => (
-                                  <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select onValueChange={(v) => addExercise(expandedDay, v as CompoundExercise)}>
-                              <SelectTrigger className="w-40 h-8 border-rough text-xs">
-                                <SelectValue placeholder="+ Add exercise" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ALL_EXERCISES.filter(e => !plan[expandedDay].exercises.includes(e)).map(ex => (
-                                  <SelectItem key={ex} value={ex}>{EXERCISE_LABELS[ex]}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <Link to="/workouts">
-                          <Button size="sm" className="mt-2 gradient-alien text-primary-foreground font-bold font-gothic w-full">
-                            ⚔ Start Workout
-                          </Button>
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* RIGHT: Goals & Todos */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-medieval text-muted-foreground border-b border-border/30 pb-1">
-                      <Target className="h-3.5 w-3.5" /> GOALS & TO-DOS
+                        </SelectContent>
+                      </Select>
+                      <Select onValueChange={(v) => addExercise(expandedDay, v as CompoundExercise)}>
+                        <SelectTrigger className="w-40 h-8 border-rough text-xs">
+                          <SelectValue placeholder="+ Add exercise" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALL_EXERCISES.filter(e => !plan[expandedDay].exercises.includes(e)).map(ex => (
+                            <SelectItem key={ex} value={ex}>{EXERCISE_LABELS[ex]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <DayTodoList
-                      dayName={DAYS[expandedDay]}
-                      todos={getTodosForDay(DAYS[expandedDay])}
-                      onToggle={handleToggleTodo}
-                      onUnassign={unassignFromDay}
-                    />
-                  </div>
-                </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {plan[expandedDay].exercises.map(ex => (
+                        <Badge key={ex} variant="outline" className="border-primary/30 text-xs font-medieval group">
+                          {EXERCISE_LABELS[ex]}
+                          <button onClick={() => removeExercise(expandedDay, ex)} className="ml-1 opacity-50 group-hover:opacity-100">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Time Block Planner */}
+                <DailyTimeBlocks
+                  dayName={DAYS[expandedDay]}
+                  onToggleTodo={(todoId) => {
+                    const todo = allTodos.find(t => t.todoId === todoId);
+                    if (todo) handleToggleTodo(todo);
+                  }}
+                />
+
+                {/* Start workout button */}
+                {plan[expandedDay].splitDay !== 'rest' && (
+                  <Link to="/workouts">
+                    <Button size="sm" className="gradient-alien text-primary-foreground font-bold font-gothic w-full">
+                      ⚔ Start Workout
+                    </Button>
+                  </Link>
+                )}
               </CardContent>
             </Card>
           </motion.div>
