@@ -160,7 +160,11 @@ export default function GoalsPage() {
     const today = new Date().toISOString().split('T')[0];
     const deadline = goal.deadline || '(no deadline set)';
 
-    return `You are a project planning assistant. I need you to generate a detailed, dated plan for my goal.
+    return `You are an expert project planner, systems designer, and skill coach.
+
+Your job is to convert a goal into a structured execution plan with realistic progression and atomic actions.
+
+The plan must be practical, logically ordered, and deeply thought out.
 
 GOAL: "${goal.title}"
 DESCRIPTION: ${goal.description}
@@ -171,15 +175,47 @@ DEADLINE: ${deadline}
 EXISTING PHASES:
 ${phaseList || '  (No phases yet — please generate 3-5 phases)'}
 
-INSTRUCTIONS:
-- For each phase, generate 3-7 specific, actionable TASKs.
-- For each TASK, generate 2-5 granular TODO items.
-- EVERY item MUST have a deadline in YYYY-MM-DD format, distributed evenly between ${today} and ${deadline}.
-- Phase deadlines should divide the timeline into roughly equal segments.
-- Task deadlines should fall within their parent phase's timeline.
-- Todo deadlines should fall within their parent task's timeline.
+The plan must follow this progression model:
+1. Understanding / knowledge
+2. Prerequisite skills or preparation
+3. Guided or assisted attempts
+4. First successful completion
+5. Repetition and consistency
+6. Variation and adaptation
+7. Performance mastery
 
-YOU MUST USE THIS EXACT FORMAT (pipe-separated, one item per line):
+TODO RULES — TODO items must:
+- Be completable in a single uninterrupted session
+- Take approximately 5–60 minutes
+- Represent one concrete action
+- NOT represent habits or ongoing routines
+- NOT represent vague ideas like "practice more"
+Good: "Record video of 3 attempts", "Watch 2 instructional videos", "Write summary of technique"
+Bad: "Practice daily", "Train for a month", "Improve strength"
+If a TODO is larger than a single session, break it into smaller TODOs.
+
+TASK RULES — Tasks must:
+- Represent measurable capability milestones
+- Include numbers or clear success criteria
+- Represent meaningful progress toward the goal
+Good: "Land first assisted backflip", "Hold a 2-minute plank"
+Bad: "Improve technique", "Work on strength"
+
+TIME RULES:
+- Every item MUST have a deadline in YYYY-MM-DD format.
+- Phase deadlines divide the total timeline (${today} to ${deadline}) roughly evenly.
+- Task deadlines fall within their phase.
+- Todo deadlines fall within their task.
+- Deadlines should progress logically and steadily.
+
+PLAN QUALITY — Before producing the final plan, internally verify that:
+- Progression makes logical sense
+- Tasks represent real milestones
+- Todos are atomic single-session actions
+- No vague wording is used
+- Nothing requires multiple sessions
+
+OUTPUT FORMAT — You MUST use this exact format:
 
 PHASE: Phase Title | Phase description | YYYY-MM-DD
   TASK: Task Title | Task description | YYYY-MM-DD
@@ -189,12 +225,12 @@ PHASE: Phase Title | Phase description | YYYY-MM-DD
     TODO: Sub-item | YYYY-MM-DD
 
 RULES:
-- Lines must start with PHASE:, TASK:, or TODO: (with proper indentation)
+- Lines must start with PHASE:, TASK:, or TODO:
+- Maintain indentation
 - Use | (pipe) to separate fields
-- Dates MUST be valid YYYY-MM-DD format
-- Do NOT add any other text, headers, or commentary
-- Tasks should be concrete and measurable
-- Todos should be completable in one sitting`;
+- Dates MUST be YYYY-MM-DD
+- Do NOT add explanations or commentary
+- Output ONLY the plan`;
   };
 
   const copyPrompt = (goal: Goal) => {
