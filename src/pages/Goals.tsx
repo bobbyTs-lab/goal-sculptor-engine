@@ -169,11 +169,12 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
           </CardContent>
         </Card>
       ) : (
-        goals.map(goal => {
+        goals.map((goal, goalIdx) => {
           const progress = calculateGoalProgress(goal);
           const isExpanded = expandedGoals.has(goal.id);
           return (
-            <Card key={goal.id} className="border-rough relative overflow-hidden scanlines bg-card/80">
+            <EmberCard key={goal.id} delay={goalIdx * 0.12}>
+            <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
               <Collapsible open={isExpanded} onOpenChange={() => toggle(expandedGoals, goal.id, setExpandedGoals)}>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors relative z-10">
