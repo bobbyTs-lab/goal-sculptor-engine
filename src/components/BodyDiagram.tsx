@@ -145,9 +145,9 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
             </defs>
 
             {/* Vitruvian circle */}
-            <circle cx="250" cy="260" r="230" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={0.6} />
+            <circle cx="250" cy="260" r="230" fill="none" stroke="hsl(42 100% 50% / 0.25)" strokeWidth={0.8} />
             {/* Vitruvian square */}
-            <rect x="68" y="42" width="364" height="448" fill="none" stroke="hsl(42 100% 50% / 0.04)" strokeWidth={0.5} />
+            <rect x="68" y="42" width="364" height="448" fill="none" stroke="hsl(42 100% 50% / 0.18)" strokeWidth={0.6} />
 
             {/* Golden spiral */}
             <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.1)" strokeWidth={0.5} strokeDasharray="6 10">
