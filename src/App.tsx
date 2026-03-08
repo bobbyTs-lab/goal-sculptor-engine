@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Goals from "./pages/Goals";
 import Workouts from "./pages/Workouts";
 import Program from "./pages/Program";
+import People from "./pages/People";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
