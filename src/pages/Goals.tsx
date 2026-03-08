@@ -155,6 +155,7 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
             </div>
           </DialogContent>
         </Dialog>
+        </EmberCard>
       </div>
 
       <div className="divider-alien" />
