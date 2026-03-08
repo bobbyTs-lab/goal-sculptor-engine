@@ -115,18 +115,21 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text">Goals</h1>
-          <p className="text-muted-foreground mt-1 font-medieval">
-            {goals.length} goal{goals.length !== 1 ? 's' : ''} active
-          </p>
-        </div>
-        <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
-          <DialogTrigger asChild>
-            <Button className="gradient-alien text-primary-foreground font-bold glow-green font-medieval tracking-wide">
-              <Plus className="h-4 w-4 mr-2" /> New Goal
-            </Button>
-          </DialogTrigger>
+        <FlickerIn>
+          <div>
+            <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Goals</h1>
+            <p className="text-muted-foreground mt-1 font-medieval">
+              {goals.length} goal{goals.length !== 1 ? 's' : ''} active
+            </p>
+          </div>
+        </FlickerIn>
+        <EmberCard delay={0.2}>
+          <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
+            <DialogTrigger asChild>
+              <Button className="gradient-alien text-primary-foreground font-bold glow-green font-medieval tracking-wide crt-hover">
+                <Plus className="h-4 w-4 mr-2" /> New Goal
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-card border-rough">
             <DialogHeader>
               <DialogTitle className="font-gothic gradient-alien-text text-2xl">Forge New Goal</DialogTitle>
