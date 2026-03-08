@@ -353,7 +353,7 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full space-y-2 p-2">
       {/* Header */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-medieval text-muted-foreground">Click timeline to add · Drag to move · Drag bottom to resize</span>
