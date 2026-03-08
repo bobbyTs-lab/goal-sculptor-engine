@@ -38,9 +38,13 @@ export function useWorkouts() {
     return newSession;
   }, [sessions, configs, persistSessions, persistConfigs]);
 
+  const deleteSession = useCallback((id: string) => {
+    persistSessions(sessions.filter(s => s.id !== id));
+  }, [sessions, persistSessions]);
+
   const updateConfig = useCallback((exercise: string, updates: Partial<ExerciseConfig>) => {
     persistConfigs(configs.map(c => c.exercise === exercise ? { ...c, ...updates } : c));
   }, [configs, persistConfigs]);
 
-  return { sessions, configs, addSession, updateConfig };
+  return { sessions, configs, addSession, deleteSession, updateConfig };
 }

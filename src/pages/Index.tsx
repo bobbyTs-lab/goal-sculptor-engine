@@ -4,10 +4,13 @@ import { calculateGoalProgress } from '@/types/goals';
 import { getPersonalRecords, getWeeklyVolume } from '@/lib/progressive-overload';
 import { EXERCISE_LABELS } from '@/types/workout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Target, Dumbbell, Trophy, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmberCard, EmberStagger, EmberText, FlickerIn } from '@/components/EmberAnimations';
+import { ProgressRing } from '@/components/ProgressRing';
+import { BodyDiagram } from '@/components/BodyDiagram';
+import { MotivationalQuotes } from '@/components/MotivationalQuotes';
+import { loadSettings } from '@/lib/storage';
 
 export default function Index() {
   const { goals } = useGoals();
@@ -15,6 +18,7 @@ export default function Index() {
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
+  const settings = loadSettings();
 
   return (
     <div className="max-w-4xl mx-auto space-y-10">
@@ -38,6 +42,14 @@ export default function Index() {
         </EmberText>
       </div>
 
+      {/* Motivational Quote */}
+      <EmberCard delay={0.1}>
+        <MotivationalQuotes
+          enabled={settings.quotesEnabled}
+          customQuotes={settings.customQuotes.length > 0 ? settings.customQuotes : undefined}
+        />
+      </EmberCard>
+
       {/* Stats row */}
       <EmberStagger className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -58,6 +70,11 @@ export default function Index() {
         ))}
       </EmberStagger>
 
+      {/* Body Diagram */}
+      <EmberCard delay={0.3}>
+        <BodyDiagram prs={prs} />
+      </EmberCard>
+
       {/* Quick links */}
       <EmberStagger className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <EmberCard delay={0}>
@@ -74,10 +91,7 @@ export default function Index() {
                     {goals.slice(0, 3).map(g => (
                       <div key={g.id} className="flex items-center justify-between">
                         <span className="text-sm truncate font-medieval">{g.title}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-primary font-bold">{calculateGoalProgress(g)}%</span>
-                          <Progress value={calculateGoalProgress(g)} className="w-16 h-2" />
-                        </div>
+                        <ProgressRing value={calculateGoalProgress(g)} size={36} strokeWidth={3} />
                       </div>
                     ))}
                   </div>

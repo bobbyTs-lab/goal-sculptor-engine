@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmberCard, EmberText, EmberStagger, FlickerIn } from '@/components/EmberAnimations';
 
@@ -63,7 +64,7 @@ function RestTimer() {
 }
 
 export default function WorkoutsPage() {
-  const { sessions, configs, addSession, updateConfig } = useWorkouts();
+  const { sessions, configs, addSession, deleteSession, updateConfig } = useWorkouts();
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
 
@@ -72,6 +73,13 @@ export default function WorkoutsPage() {
     exercise: CompoundExercise;
     sets: SetLog[];
   }[]>([]);
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+
+  const toggleSession = (id: string) => {
+    const next = new Set(expandedSessions);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setExpandedSessions(next);
+  };
 
   const addExerciseToSession = (exercise: CompoundExercise) => {
     const config = configs.find(c => c.exercise === exercise);
@@ -117,6 +125,8 @@ export default function WorkoutsPage() {
     volume: calculateVolumeLoad(h.sets),
   }));
 
+  const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <FlickerIn>
@@ -131,6 +141,7 @@ export default function WorkoutsPage() {
       <Tabs defaultValue="session" className="space-y-4">
         <TabsList className="bg-muted/30 border-rough">
           <TabsTrigger value="session" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Log Session</TabsTrigger>
+          <TabsTrigger value="history" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">History</TabsTrigger>
           <TabsTrigger value="progress" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Progress</TabsTrigger>
           <TabsTrigger value="prs" className="font-medieval data-[state=active]:text-secondary data-[state=active]:glow-gold-text">PRs</TabsTrigger>
           <TabsTrigger value="config" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Config</TabsTrigger>
@@ -226,6 +237,77 @@ export default function WorkoutsPage() {
                 <p className="text-muted-foreground font-medieval text-lg">Select exercises above to begin</p>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* HISTORY TAB */}
+        <TabsContent value="history" className="space-y-4">
+          {sortedSessions.length === 0 ? (
+            <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <History className="h-16 w-16 text-primary/40 mb-4 drop-shadow-[0_0_15px_hsl(130,100%,40%,0.4)]" />
+                <p className="text-muted-foreground font-medieval text-lg">No sessions logged yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            sortedSessions.map((session, i) => {
+              const isExpanded = expandedSessions.has(session.id);
+              const totalVolume = session.exercises.reduce((sum, ex) => sum + calculateVolumeLoad(ex.sets), 0);
+              return (
+                <EmberCard key={session.id} delay={i * 0.05}>
+                  <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
+                    <Collapsible open={isExpanded} onOpenChange={() => toggleSession(session.id)}>
+                      <CollapsibleTrigger asChild>
+                        <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors relative z-10 py-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {isExpanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medieval font-bold">{new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                  <Badge variant="outline" className="border-primary/30 font-medieval text-xs capitalize">{session.splitDay}</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground font-medieval mt-0.5">
+                                  {session.exercises.length} exercise{session.exercises.length !== 1 ? 's' : ''} · {totalVolume.toLocaleString()} lbs volume
+                                </p>
+                              </div>
+                            </div>
+                            <Button size="sm" variant="ghost" className="text-destructive h-7" onClick={(e) => { e.stopPropagation(); deleteSession(session.id); toast.success('Session deleted'); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <CardContent className="pt-0 relative z-10">
+                          <div className="divider-alien mb-3" />
+                          <div className="space-y-3">
+                            {session.exercises.map((ex, exIdx) => (
+                              <div key={exIdx} className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Dumbbell className="h-3.5 w-3.5 text-primary" />
+                                  <span className="font-medieval font-bold text-sm">{EXERCISE_LABELS[ex.exercise]}</span>
+                                  <span className="text-xs text-muted-foreground ml-auto">{calculateVolumeLoad(ex.sets)} lbs</span>
+                                </div>
+                                <div className="ml-6 space-y-0.5">
+                                  {ex.sets.map((set, sIdx) => (
+                                    <div key={sIdx} className="text-xs text-muted-foreground font-mono flex gap-4">
+                                      <span>Set {sIdx + 1}:</span>
+                                      <span>{set.weight} lbs × {set.reps}</span>
+                                      <span className="text-primary/60">RPE {set.rpe}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </Card>
+                </EmberCard>
+              );
+            })
           )}
         </TabsContent>
 
