@@ -245,7 +245,7 @@ export default function WorkoutsPage() {
             </div>
           </div>
 
-          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <Card className="border-runic relative overflow-hidden scanlines bg-card/80 texture-cracks texture-parchment drip-edge">
             <CardHeader className="relative z-10">
               <CardTitle className="text-sm flex items-center gap-2 font-medieval">
                 <TrendingUp className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" /> Weight Progression
