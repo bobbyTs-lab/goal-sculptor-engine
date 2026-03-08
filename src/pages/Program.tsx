@@ -408,6 +408,11 @@ export default function ProgramPage() {
                   </motion.div>
                 )}
 
+                {/* Repeatable Block Templates */}
+                <div className="border border-border/30 rounded-lg p-3 bg-muted/10">
+                  <RepeatableBlockManager />
+                </div>
+
                 {/* Time Block Planner */}
                 <DailyTimeBlocks
                   dayName={DAYS[expandedDay]}
