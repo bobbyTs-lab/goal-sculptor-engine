@@ -416,8 +416,8 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
       {/* TIMELINE */}
       <div
         ref={containerRef}
-        className="relative border border-border/30 rounded-lg overflow-y-auto bg-card/30 select-none"
-        style={{ height: 500, cursor: dragging ? 'grabbing' : 'default' }}
+        className="relative rounded-lg overflow-y-auto bg-card/30 select-none flex-1 min-h-0"
+        style={{ cursor: dragging ? 'grabbing' : 'default' }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onClick={handleTimelineClick}
