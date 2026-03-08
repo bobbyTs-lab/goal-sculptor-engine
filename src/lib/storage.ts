@@ -155,6 +155,14 @@ export const saveTimeBlocks = (blocks: TimeBlock[]) => save(KEYS.TIME_BLOCKS, bl
 export const loadBlockCategories = (): BlockCategory[] => load(KEYS.BLOCK_CATEGORIES, DEFAULT_CATEGORIES);
 export const saveBlockCategories = (cats: BlockCategory[]) => save(KEYS.BLOCK_CATEGORIES, cats);
 
+// Repeatable Blocks
+export const loadRepeatableBlocks = (): RepeatableBlock[] => load(KEYS.REPEATABLE_BLOCKS, []);
+export const saveRepeatableBlocks = (blocks: RepeatableBlock[]) => save(KEYS.REPEATABLE_BLOCKS, blocks);
+
+// Contacts
+export const loadContacts = (): Contact[] => load(KEYS.CONTACTS, []);
+export const saveContacts = (contacts: Contact[]) => save(KEYS.CONTACTS, contacts);
+
 // Export all data
 export function exportAllData(): string {
   return JSON.stringify({
