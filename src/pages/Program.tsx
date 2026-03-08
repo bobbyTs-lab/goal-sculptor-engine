@@ -657,8 +657,6 @@ function DayTodoList({ dayName, todos, onToggle, onUnassign }: {
     </div>
   );
 }
-            </CardTitle>
-          </CardHeader>
           <CardContent className="relative z-10">
             {backlog.length === 0 ? (
               <p className="text-xs text-muted-foreground font-medieval flex items-center gap-1">
