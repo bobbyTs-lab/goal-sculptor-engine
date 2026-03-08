@@ -93,7 +93,7 @@ function DeadlineBadge({ deadline }: { deadline?: string }) {
 
 export default function GoalsPage() {
   const {
-    goals, addGoal, deleteGoal,
+    goals, addGoal, updateGoal, deleteGoal,
     addPhase, deletePhase,
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
