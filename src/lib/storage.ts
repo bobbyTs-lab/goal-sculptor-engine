@@ -13,7 +13,38 @@ const KEYS = {
   TEMPLATES: 'goalforge_templates',
   WEEKLY_SCHEDULE: 'goalforge_weekly_schedule',
   WEEKLY_FOCUS: 'goalforge_weekly_focus',
+  TIME_BLOCKS: 'goalforge_time_blocks',
+  BLOCK_CATEGORIES: 'goalforge_block_categories',
 } as const;
+
+// Time Block Types
+export interface BlockCategory {
+  id: string;
+  name: string;
+  color: string; // HSL string like "130 100% 40%"
+}
+
+export interface TimeBlock {
+  id: string;
+  dayName: string;
+  categoryId: string;
+  title: string;
+  startHour: number; // 0-23
+  startMinute: number; // 0 or 30
+  durationMinutes: number; // multiples of 30
+  todoId?: string; // optional link to a goal todo
+  done?: boolean;
+}
+
+export const DEFAULT_CATEGORIES: BlockCategory[] = [
+  { id: 'workout', name: 'Workout', color: '130 100% 40%' },
+  { id: 'meals', name: 'Meals', color: '42 100% 50%' },
+  { id: 'goals', name: 'Goals', color: '280 80% 55%' },
+  { id: 'work', name: 'Work', color: '210 80% 50%' },
+  { id: 'study', name: 'Study', color: '170 70% 40%' },
+  { id: 'personal', name: 'Personal', color: '350 80% 55%' },
+  { id: 'rest', name: 'Rest / Recovery', color: '60 20% 40%' },
+];
 
 export interface AppSettings {
   quotesEnabled: boolean;
@@ -86,6 +117,14 @@ export const saveWeeklySchedule = (schedule: WeeklySchedule) => save(KEYS.WEEKLY
 // Weekly Focus (prioritized goal IDs)
 export const loadWeeklyFocus = (): string[] => load(KEYS.WEEKLY_FOCUS, []);
 export const saveWeeklyFocus = (focus: string[]) => save(KEYS.WEEKLY_FOCUS, focus);
+
+// Time Blocks
+export const loadTimeBlocks = (): TimeBlock[] => load(KEYS.TIME_BLOCKS, []);
+export const saveTimeBlocks = (blocks: TimeBlock[]) => save(KEYS.TIME_BLOCKS, blocks);
+
+// Block Categories
+export const loadBlockCategories = (): BlockCategory[] => load(KEYS.BLOCK_CATEGORIES, DEFAULT_CATEGORIES);
+export const saveBlockCategories = (cats: BlockCategory[]) => save(KEYS.BLOCK_CATEGORIES, cats);
 
 // Export all data
 export function exportAllData(): string {
