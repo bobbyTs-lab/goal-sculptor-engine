@@ -15,7 +15,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <h1 className="font-gothic text-3xl gradient-alien-text animate-flicker relative z-10 chromatic-aberration">GoalForge</h1>
           </header>
           <main className="flex-1 overflow-auto p-6 texture-cracks scanlines-heavy relative">
+            <div className="relative z-10">
             {children}
+            </div>
           </main>
         </div>
       </div>

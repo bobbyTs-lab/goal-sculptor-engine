@@ -264,8 +264,7 @@
     linear-gradient(290deg, transparent 65%, hsl(280 50% 15% / 0.25) 65.15%, transparent 65.4%),
     linear-gradient(95deg, transparent 85%, hsl(0 0% 0% / 0.35) 85.2%, transparent 85.5%);
   pointer-events: none;
-  z-index: 1;
-  mix-blend-mode: multiply;
+  z-index: 0;
 }
 
 /* Parchment grain - warm SVG noise at high opacity */
