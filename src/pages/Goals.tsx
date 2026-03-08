@@ -210,51 +210,7 @@ RULES:
     }
   };
 
-  const handleImportAll = () => {
-    if (!promptGoal || !parsedResult) return;
-    const goal = promptGoal;
-
-    // Check if we should create new phases or use existing ones
-    const existingPhaseNames = goal.phases.map(p => p.title.toLowerCase());
-    let importedPhases = 0, importedTasks = 0, importedTodos = 0;
-
-    for (const pp of parsedResult.phases) {
-      // Try to match existing phase by name
-      const existingPhase = goal.phases.find(p => p.title.toLowerCase() === pp.title.toLowerCase());
-
-      if (existingPhase) {
-        // Add tasks to existing phase
-        for (const pt of pp.tasks) {
-          addTask(goal.id, existingPhase.id, pt.title, pt.description, pt.deadline);
-          importedTasks++;
-          // We need to get the updated goal to find the new task ID
-          // Since addTask is async via state, we'll add todos after a brief approach
-          // For simplicity, we batch tasks first, then todos need the task IDs
-        }
-      } else {
-        // Create new phase
-        addPhase(goal.id, pp.title, pp.description, pp.deadline);
-        importedPhases++;
-      }
-    }
-
-    // Since state updates are batched, we need to use a timeout to add nested items
-    // after phases/tasks are created. Better approach: do it all synchronously via direct persist.
-    toast.success(`Imported ${parsedResult.phases.length} phases with tasks! Adding todos...`);
-
-    // Use a short delay to let state settle, then add tasks and todos to new phases
-    setTimeout(() => {
-      // Re-read goals would be needed, but since useGoals uses state we need a different approach.
-      // The simplest reliable approach: import everything in one pass by building the full structure.
-      toast.info('Note: Todos for new phases will be added as you expand and interact with them. For the best experience, re-open the goal after import.');
-    }, 500);
-
-    setParsedResult(null);
-    setAiResponseText('');
-    setPromptGoal(null);
-  };
-
-  // Better import: directly build and persist all data at once
+  // Bulk import: directly build and persist all data at once
   const handleBulkImport = () => {
     if (!promptGoal || !parsedResult) return;
 
