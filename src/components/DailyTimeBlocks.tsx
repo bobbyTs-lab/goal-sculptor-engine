@@ -404,8 +404,8 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
         )}
       </AnimatePresence>
 
-      {/* Category legend */}
-      <div className="flex flex-wrap gap-1">
+      {/* Category legend — hidden on mobile */}
+      <div className="hidden md:flex flex-wrap gap-1 flex-shrink-0">
         {categories.map(cat => (
           <Badge key={cat.id} variant="outline" className="text-[10px] font-medieval cursor-default" style={{ backgroundColor: `hsl(${cat.color} / 0.15)`, borderColor: `hsl(${cat.color} / 0.4)`, color: `hsl(${cat.color})` }}>
             {cat.name}
