@@ -170,8 +170,8 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
             })}
 
             {/* Proportion guides */}
-            <line x1="250" y1="30" x2="250" y2="500" stroke="hsl(42 100% 50% / 0.03)" strokeWidth={0.4} strokeDasharray="3 8" />
-            <line x1="50" y1="260" x2="450" y2="260" stroke="hsl(42 100% 50% / 0.03)" strokeWidth={0.4} strokeDasharray="3 8" />
+            <line x1="250" y1="30" x2="250" y2="500" stroke="hsl(42 100% 50% / 0.15)" strokeWidth={0.5} strokeDasharray="3 8" />
+            <line x1="50" y1="260" x2="450" y2="260" stroke="hsl(42 100% 50% / 0.15)" strokeWidth={0.5} strokeDasharray="3 8" />
 
             {/* ===== ORGANIC BODY — Smooth curves ===== */}
 
