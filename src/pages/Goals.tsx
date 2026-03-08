@@ -342,8 +342,8 @@ RULES:
       <div className="flex items-center justify-between">
         <FlickerIn>
           <div>
-            <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Goals</h1>
-            <p className="text-muted-foreground mt-1 font-medieval">
+            <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Goals</h1>
+            <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">
               {goals.length} goal{goals.length !== 1 ? 's' : ''} active
             </p>
           </div>
