@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGoals } from '@/hooks/useGoals';
+import { generateId } from '@/lib/storage';
 import { Goal, calculateGoalProgress, calculatePhaseProgress, calculateTaskProgress, deriveTaskStatus, getDaysRemaining, getUrgencyClass, getUrgencyColor } from '@/types/goals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
