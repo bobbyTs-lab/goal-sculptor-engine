@@ -296,7 +296,7 @@ export default function WorkoutsPage() {
         <TabsContent value="prs" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {prs.length > 0 ? prs.map(pr => (
-              <Card key={pr.exercise} className="border-rough glow-gold relative overflow-hidden scanlines bg-card/80">
+              <Card key={pr.exercise} className="border-runic glow-gold relative overflow-hidden scanlines bg-card/80 texture-parchment patina-stain drip-edge glitch-hover">
                 <CardContent className="pt-6 relative z-10">
                   <div className="flex items-center gap-3">
                     <Trophy className="h-8 w-8 text-secondary drop-shadow-[0_0_10px_hsl(42,100%,50%,0.6)]" />
