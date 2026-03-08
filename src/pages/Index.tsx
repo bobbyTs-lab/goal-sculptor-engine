@@ -47,7 +47,7 @@ export default function Index() {
           { icon: TrendingUp, value: latestVolume.toLocaleString(), label: 'Weekly Vol', color: 'secondary', glow: 'glow-gold-text' },
         ].map((stat, i) => (
           <EmberCard key={stat.label} delay={i * 0.1}>
-            <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
+            <Card className="border-runic relative overflow-hidden scanlines bg-card/80 crt-hover texture-parchment drip-edge glitch-hover">
               <CardContent className="pt-6 text-center relative z-10">
                 <stat.icon className={`h-7 w-7 mx-auto text-${stat.color} mb-2 drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]`} />
                 <p className={`text-3xl font-bold font-medieval ${stat.glow}`}>{stat.value}</p>
