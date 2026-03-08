@@ -11,6 +11,8 @@ const KEYS = {
   SETTINGS: 'goalforge_settings',
   ACHIEVEMENTS: 'goalforge_achievements',
   TEMPLATES: 'goalforge_templates',
+  WEEKLY_SCHEDULE: 'goalforge_weekly_schedule',
+  WEEKLY_FOCUS: 'goalforge_weekly_focus',
 } as const;
 
 export interface AppSettings {
