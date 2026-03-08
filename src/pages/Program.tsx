@@ -277,8 +277,8 @@ export default function ProgramPage() {
         </Card>
       </EmberCard>
 
-      {/* WEEK AT A GLANCE — 7-column grid */}
-      <div className="grid grid-cols-7 gap-1.5">
+      {/* WEEK AT A GLANCE — scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-7 md:gap-1.5 md:overflow-visible -mx-1 px-1 snap-x snap-mandatory">
         {plan.map((day, idx) => {
           const dayTodos = getTodosForDay(DAYS[idx]);
           const workload = getWorkload(idx);
