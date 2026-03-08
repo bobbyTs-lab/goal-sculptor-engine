@@ -74,8 +74,8 @@ export default function SettingsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <FlickerIn>
         <div>
-          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Settings</h1>
-          <p className="text-muted-foreground mt-1 font-medieval">Data management & customization</p>
+          <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Settings</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Data management & customization</p>
         </div>
       </FlickerIn>
 

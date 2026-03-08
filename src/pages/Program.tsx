@@ -217,11 +217,11 @@ export default function ProgramPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
       <FlickerIn>
         <div>
-          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Program Builder</h1>
-          <p className="text-muted-foreground mt-1 font-medieval">Plan your week · Balance your splits · Schedule your goals</p>
+          <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Program</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Plan your week · Schedule your goals</p>
         </div>
       </FlickerIn>
 
@@ -277,8 +277,8 @@ export default function ProgramPage() {
         </Card>
       </EmberCard>
 
-      {/* WEEK AT A GLANCE — 7-column grid */}
-      <div className="grid grid-cols-7 gap-1.5">
+      {/* WEEK AT A GLANCE — scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-7 md:gap-1.5 md:overflow-visible -mx-1 px-1 snap-x snap-mandatory">
         {plan.map((day, idx) => {
           const dayTodos = getTodosForDay(DAYS[idx]);
           const workload = getWorkload(idx);
@@ -291,7 +291,8 @@ export default function ProgramPage() {
               key={day.day}
               onClick={() => setExpandedDay(isExpanded ? null : idx)}
               className={`
-                relative rounded-lg border p-2 text-center transition-all cursor-pointer
+                relative rounded-lg border p-2.5 md:p-2 text-center transition-all cursor-pointer
+                min-w-[4.5rem] md:min-w-0 snap-center flex-shrink-0
                 ${isToday ? 'ring-2 ring-primary/50 border-primary/40' : 'border-border/30'}
                 ${isExpanded ? 'bg-card/90' : 'bg-card/50 hover:bg-card/70'}
                 ${day.splitDay === 'rest' ? 'opacity-60' : ''}

@@ -184,8 +184,8 @@ export default function WorkoutsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <FlickerIn>
         <div>
-          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Workout Engine</h1>
-          <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
+          <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Workouts</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Progressive overload · Compound-first</p>
         </div>
       </FlickerIn>
 
