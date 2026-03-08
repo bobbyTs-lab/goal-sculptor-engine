@@ -291,7 +291,8 @@ export default function ProgramPage() {
               key={day.day}
               onClick={() => setExpandedDay(isExpanded ? null : idx)}
               className={`
-                relative rounded-lg border p-2 text-center transition-all cursor-pointer
+                relative rounded-lg border p-2.5 md:p-2 text-center transition-all cursor-pointer
+                min-w-[4.5rem] md:min-w-0 snap-center flex-shrink-0
                 ${isToday ? 'ring-2 ring-primary/50 border-primary/40' : 'border-border/30'}
                 ${isExpanded ? 'bg-card/90' : 'bg-card/50 hover:bg-card/70'}
                 ${day.splitDay === 'rest' ? 'opacity-60' : ''}
