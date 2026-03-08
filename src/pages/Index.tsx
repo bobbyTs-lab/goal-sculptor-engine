@@ -17,14 +17,14 @@ export default function Index() {
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 relative">
+    <div className="max-w-4xl mx-auto space-y-10">
       {/* Hero */}
-      <div className="text-center py-12 relative texture-parchment patina-stain">
+      <div className="text-center py-12 relative">
         <EmberText delay={0}>
           <div className="divider-alien mb-8" />
         </EmberText>
         <FlickerIn>
-          <h1 className="font-gothic text-6xl md:text-7xl gradient-alien-text mb-4 tracking-wide relative ember-particles chromatic-aberration">
+          <h1 className="font-gothic text-6xl md:text-7xl gradient-alien-text mb-4 tracking-wide relative ember-particles">
             GoalForge
           </h1>
         </FlickerIn>
@@ -47,7 +47,7 @@ export default function Index() {
           { icon: TrendingUp, value: latestVolume.toLocaleString(), label: 'Weekly Vol', color: 'secondary', glow: 'glow-gold-text' },
         ].map((stat, i) => (
           <EmberCard key={stat.label} delay={i * 0.1}>
-            <Card className="border-runic relative overflow-hidden scanlines bg-card/80 crt-hover texture-parchment drip-edge glitch-hover">
+            <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
               <CardContent className="pt-6 text-center relative z-10">
                 <stat.icon className={`h-7 w-7 mx-auto text-${stat.color} mb-2 drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]`} />
                 <p className={`text-3xl font-bold font-medieval ${stat.glow}`}>{stat.value}</p>
@@ -62,7 +62,7 @@ export default function Index() {
       <EmberStagger className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <EmberCard delay={0}>
           <Link to="/goals">
-            <Card className="border-runic border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-green transition-all duration-500 cursor-pointer group crt-hover texture-cracks texture-parchment drip-edge patina-stain">
+            <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-green transition-all duration-500 cursor-pointer group crt-hover">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-green-text transition-all">
                   <Target className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]" /> Goals
@@ -91,7 +91,7 @@ export default function Index() {
 
         <EmberCard delay={0.15}>
           <Link to="/workouts">
-            <Card className="border-runic border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-gold transition-all duration-500 cursor-pointer group crt-hover texture-cracks texture-parchment drip-edge patina-stain">
+            <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-gold transition-all duration-500 cursor-pointer group crt-hover">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-gold-text transition-all">
                   <Dumbbell className="h-6 w-6 text-secondary drop-shadow-[0_0_8px_hsl(42,100%,50%,0.6)]" /> Workouts

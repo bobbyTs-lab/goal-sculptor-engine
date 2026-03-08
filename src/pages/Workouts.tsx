@@ -121,7 +121,7 @@ export default function WorkoutsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <FlickerIn>
         <div>
-          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative chromatic-aberration">Workout Engine</h1>
+          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Workout Engine</h1>
           <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
         </div>
       </FlickerIn>
@@ -170,7 +170,7 @@ export default function WorkoutsPage() {
             const suggestion = config ? getProgressionSuggestion(config, recentHistory) : null;
 
             return (
-              <Card key={exIdx} className="border-runic relative overflow-hidden scanlines bg-card/80 texture-parchment drip-edge glitch-hover">
+              <Card key={exIdx} className="border-rough relative overflow-hidden scanlines bg-card/80">
                 <CardHeader className="pb-2 relative z-10">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2 font-medieval">
@@ -245,7 +245,7 @@ export default function WorkoutsPage() {
             </div>
           </div>
 
-          <Card className="border-runic relative overflow-hidden scanlines bg-card/80 texture-cracks texture-parchment drip-edge">
+          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
             <CardHeader className="relative z-10">
               <CardTitle className="text-sm flex items-center gap-2 font-medieval">
                 <TrendingUp className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" /> Weight Progression
@@ -268,7 +268,7 @@ export default function WorkoutsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-runic relative overflow-hidden scanlines bg-card/80 texture-cracks texture-parchment drip-edge">
+          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
             <CardHeader className="relative z-10">
               <CardTitle className="text-sm flex items-center gap-2 font-medieval">
                 <TrendingUp className="h-4 w-4 text-secondary drop-shadow-[0_0_6px_hsl(42,100%,50%,0.5)]" /> Weekly Volume
@@ -296,7 +296,7 @@ export default function WorkoutsPage() {
         <TabsContent value="prs" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {prs.length > 0 ? prs.map(pr => (
-              <Card key={pr.exercise} className="border-runic glow-gold relative overflow-hidden scanlines bg-card/80 texture-parchment patina-stain drip-edge glitch-hover">
+              <Card key={pr.exercise} className="border-rough glow-gold relative overflow-hidden scanlines bg-card/80">
                 <CardContent className="pt-6 relative z-10">
                   <div className="flex items-center gap-3">
                     <Trophy className="h-8 w-8 text-secondary drop-shadow-[0_0_10px_hsl(42,100%,50%,0.6)]" />
@@ -322,7 +322,7 @@ export default function WorkoutsPage() {
         {/* CONFIG TAB */}
         <TabsContent value="config" className="space-y-4">
           {configs.map(config => (
-            <Card key={config.exercise} className="border-runic relative overflow-hidden scanlines bg-card/80 texture-parchment">
+            <Card key={config.exercise} className="border-rough relative overflow-hidden scanlines bg-card/80">
               <CardContent className="pt-6 relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medieval font-bold text-lg">{EXERCISE_LABELS[config.exercise]}</h3>
