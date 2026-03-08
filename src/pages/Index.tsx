@@ -41,24 +41,21 @@ export default function Index() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10">
-      {/* Hero */}
-      <div className="text-center py-12 relative">
-        <EmberText delay={0}>
-          <div className="divider-alien mb-8" />
-        </EmberText>
+    <div className="max-w-4xl mx-auto space-y-6 md:space-y-10">
+      {/* Hero — compact on mobile */}
+      <div className="text-center py-4 md:py-12 relative">
         <FlickerIn>
-          <h1 className="font-gothic text-6xl md:text-7xl gradient-alien-text mb-4 tracking-wide relative ember-particles">
+          <h1 className="font-gothic text-4xl md:text-7xl gradient-alien-text mb-2 md:mb-4 tracking-wide relative ember-particles">
             GoalForge
           </h1>
         </FlickerIn>
         <EmberText delay={0.4}>
-          <p className="font-medieval text-xl text-muted-foreground glow-green-text">
+          <p className="font-medieval text-sm md:text-xl text-muted-foreground glow-green-text">
             ⚔ Forge your goals. Build your strength. ⚔
           </p>
         </EmberText>
         <EmberText delay={0.6}>
-          <div className="divider-alien mt-8" />
+          <div className="divider-alien mt-4 md:mt-8" />
         </EmberText>
       </div>
 
