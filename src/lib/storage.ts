@@ -15,7 +15,36 @@ const KEYS = {
   WEEKLY_FOCUS: 'goalforge_weekly_focus',
   TIME_BLOCKS: 'goalforge_time_blocks',
   BLOCK_CATEGORIES: 'goalforge_block_categories',
+  REPEATABLE_BLOCKS: 'goalforge_repeatable_blocks',
+  CONTACTS: 'goalforge_contacts',
 } as const;
+
+// Repeatable Block Template
+export type RepeatPattern = 'daily' | 'weekdays' | 'weekends' | 'custom';
+export interface RepeatableBlock {
+  id: string;
+  title: string;
+  categoryId: string;
+  startHour: number;
+  startMinute: number;
+  durationMinutes: number;
+  repeatPattern: RepeatPattern;
+  customDays?: string[]; // e.g. ['Monday', 'Wednesday', 'Friday']
+  enabled: boolean;
+}
+
+// Contact / Person
+export type RelationshipTag = 'family' | 'friend' | 'coworker' | 'mentor' | 'mentee' | 'partner' | 'acquaintance' | 'other';
+export interface Contact {
+  id: string;
+  name: string;
+  relationship: RelationshipTag;
+  phone?: string;
+  email?: string;
+  notes: string;
+  plan: string; // goal/plan for this relationship
+  createdAt: string;
+}
 
 // Time Block Types
 export interface BlockCategory {
