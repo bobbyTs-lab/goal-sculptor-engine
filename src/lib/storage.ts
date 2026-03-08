@@ -11,6 +11,8 @@ const KEYS = {
   SETTINGS: 'goalforge_settings',
   ACHIEVEMENTS: 'goalforge_achievements',
   TEMPLATES: 'goalforge_templates',
+  WEEKLY_SCHEDULE: 'goalforge_weekly_schedule',
+  WEEKLY_FOCUS: 'goalforge_weekly_focus',
 } as const;
 
 export interface AppSettings {
@@ -75,6 +77,15 @@ export const saveAchievements = (achievements: UnlockedAchievement[]) => save(KE
 // Templates
 export const loadTemplates = (): WorkoutTemplate[] => load(KEYS.TEMPLATES, []);
 export const saveTemplates = (templates: WorkoutTemplate[]) => save(KEYS.TEMPLATES, templates);
+
+// Weekly Schedule (day → todo IDs)
+export type WeeklySchedule = Record<string, string[]>;
+export const loadWeeklySchedule = (): WeeklySchedule => load(KEYS.WEEKLY_SCHEDULE, {});
+export const saveWeeklySchedule = (schedule: WeeklySchedule) => save(KEYS.WEEKLY_SCHEDULE, schedule);
+
+// Weekly Focus (prioritized goal IDs)
+export const loadWeeklyFocus = (): string[] => load(KEYS.WEEKLY_FOCUS, []);
+export const saveWeeklyFocus = (focus: string[]) => save(KEYS.WEEKLY_FOCUS, focus);
 
 // Export all data
 export function exportAllData(): string {
