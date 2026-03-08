@@ -572,3 +572,84 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
     </div>
   );
 }
+
+/* ─── Todo Link Picker — grouped by goal with search ─── */
+function TodoLinkPicker({ backlogTodos, onLink }: {
+  backlogTodos: BacklogTodo[];
+  onLink: (todoId: string, title: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
+
+  const filtered = search
+    ? backlogTodos.filter(t =>
+        t.title.toLowerCase().includes(search.toLowerCase()) ||
+        t.goalTitle.toLowerCase().includes(search.toLowerCase())
+      )
+    : backlogTodos;
+
+  // Group by goal
+  const grouped = filtered.reduce<Record<string, { goalTitle: string; todos: BacklogTodo[] }>>((acc, t) => {
+    const key = t.goalId || t.goalTitle;
+    if (!acc[key]) acc[key] = { goalTitle: t.goalTitle, todos: [] };
+    acc[key].todos.push(t);
+    return acc;
+  }, {});
+
+  const goalEntries = Object.entries(grouped);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50">
+          <Link2 className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="end">
+        <div className="p-2 border-b border-border/30">
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search todos..."
+            className="h-7 text-xs"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-56 overflow-y-auto p-1">
+          {goalEntries.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground font-medieval p-2 text-center">No todos found</p>
+          ) : (
+            goalEntries.map(([key, { goalTitle, todos }]) => {
+              const isOpen = expandedGoal === key || search.length > 0 || goalEntries.length === 1;
+              return (
+                <div key={key} className="mb-0.5">
+                  <button
+                    onClick={() => setExpandedGoal(isOpen && !search ? null : key)}
+                    className="flex items-center gap-1.5 w-full px-2 py-1 text-left rounded hover:bg-muted/30 transition-colors"
+                  >
+                    <Target className="h-3 w-3 text-secondary flex-shrink-0" />
+                    <span className="text-[10px] font-medieval font-bold text-secondary truncate flex-1">{goalTitle}</span>
+                    <Badge variant="outline" className="text-[8px] px-1 py-0">{todos.length}</Badge>
+                  </button>
+                  {isOpen && (
+                    <div className="ml-3 border-l border-border/20 pl-2 space-y-0">
+                      {todos.map(t => (
+                        <button
+                          key={t.todoId}
+                          onClick={() => onLink(t.todoId, t.title)}
+                          className="w-full text-left px-2 py-1 text-[11px] font-medieval rounded hover:bg-primary/15 transition-colors truncate block"
+                        >
+                          {t.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
