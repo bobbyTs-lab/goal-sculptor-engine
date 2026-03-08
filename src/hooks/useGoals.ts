@@ -10,14 +10,28 @@ export function useGoals() {
     saveGoals(updated);
   }, []);
 
+  const DEFAULT_PHASES = [
+    { title: 'Foundation', description: 'Research, planning, and initial setup — lay the groundwork.' },
+    { title: 'Development', description: 'Build core skills, systems, and habits — do the main work.' },
+    { title: 'Refinement', description: 'Optimize, iterate, and fix gaps — sharpen what you\'ve built.' },
+    { title: 'Mastery', description: 'Sustain, teach, and push limits — own the outcome.' },
+  ];
+
   const addGoal = useCallback((title: string, description: string, endGoal: string, deadline?: string) => {
+    const phases: Phase[] = DEFAULT_PHASES.map((p, i) => ({
+      id: generateId(),
+      title: p.title,
+      description: p.description,
+      tasks: [],
+      order: i,
+    }));
     const newGoal: Goal = {
       id: generateId(),
       title,
       description,
       endGoal,
       deadline,
-      phases: [],
+      phases,
       createdAt: new Date().toISOString(),
     };
     persist([...goals, newGoal]);
