@@ -118,6 +118,14 @@ export const saveWeeklySchedule = (schedule: WeeklySchedule) => save(KEYS.WEEKLY
 export const loadWeeklyFocus = (): string[] => load(KEYS.WEEKLY_FOCUS, []);
 export const saveWeeklyFocus = (focus: string[]) => save(KEYS.WEEKLY_FOCUS, focus);
 
+// Time Blocks
+export const loadTimeBlocks = (): TimeBlock[] => load(KEYS.TIME_BLOCKS, []);
+export const saveTimeBlocks = (blocks: TimeBlock[]) => save(KEYS.TIME_BLOCKS, blocks);
+
+// Block Categories
+export const loadBlockCategories = (): BlockCategory[] => load(KEYS.BLOCK_CATEGORIES, DEFAULT_CATEGORIES);
+export const saveBlockCategories = (cats: BlockCategory[]) => save(KEYS.BLOCK_CATEGORIES, cats);
+
 // Export all data
 export function exportAllData(): string {
   return JSON.stringify({
