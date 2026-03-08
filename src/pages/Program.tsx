@@ -23,6 +23,7 @@ import { EmberCard, FlickerIn, EmberStagger } from '@/components/EmberAnimations
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import DailyTimeBlocks from '@/components/DailyTimeBlocks';
+import RepeatableBlockManager from '@/components/RepeatableBlockManager';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
