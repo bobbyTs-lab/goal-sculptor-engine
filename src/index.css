@@ -62,9 +62,14 @@
       radial-gradient(ellipse at 20% 50%, hsl(130 100% 40% / 0.04) 0%, transparent 50%),
       radial-gradient(ellipse at 80% 20%, hsl(42 100% 50% / 0.03) 0%, transparent 50%),
       radial-gradient(ellipse at 50% 80%, hsl(110 100% 45% / 0.02) 0%, transparent 50%);
-    /* Parchment texture overlay */
     background-size: cover, cover, cover, 200px 200px;
+    -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Safe area for bottom tab bar */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* CRT Boot Animation */
