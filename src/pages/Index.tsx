@@ -5,7 +5,7 @@ import { getPersonalRecords, getWeeklyVolume } from '@/lib/progressive-overload'
 import { EXERCISE_LABELS } from '@/types/workout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Target, Dumbbell, Trophy, TrendingUp } from 'lucide-react';
+import { Target, Dumbbell, Trophy, TrendingUp, Skull } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Index() {
@@ -16,98 +16,106 @@ export default function Index() {
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-10">
       {/* Hero */}
-      <div className="text-center py-8">
-        <h1 className="font-medieval text-5xl gradient-alien-text mb-3">GoalForge</h1>
-        <p className="text-muted-foreground text-lg">Forge your goals. Build your strength.</p>
+      <div className="text-center py-12 relative">
+        <div className="divider-alien mb-8" />
+        <h1 className="font-gothic text-6xl md:text-7xl gradient-alien-text animate-flicker mb-4 tracking-wide">
+          GoalForge
+        </h1>
+        <p className="font-medieval text-xl text-muted-foreground glow-green-text">
+          ⚔ Forge your goals. Build your strength. ⚔
+        </p>
+        <div className="divider-alien mt-8" />
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-border">
-          <CardContent className="pt-6 text-center">
-            <Target className="h-6 w-6 mx-auto text-primary mb-2" />
-            <p className="text-2xl font-bold">{goals.length}</p>
-            <p className="text-xs text-muted-foreground">Active Goals</p>
+        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <CardContent className="pt-6 text-center relative z-10">
+            <Target className="h-7 w-7 mx-auto text-primary mb-2 drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]" />
+            <p className="text-3xl font-bold font-medieval glow-green-text">{goals.length}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Active Goals</p>
           </CardContent>
         </Card>
-        <Card className="border-border">
-          <CardContent className="pt-6 text-center">
-            <Dumbbell className="h-6 w-6 mx-auto text-primary mb-2" />
-            <p className="text-2xl font-bold">{sessions.length}</p>
-            <p className="text-xs text-muted-foreground">Sessions Logged</p>
+        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <CardContent className="pt-6 text-center relative z-10">
+            <Dumbbell className="h-7 w-7 mx-auto text-primary mb-2 drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]" />
+            <p className="text-3xl font-bold font-medieval glow-green-text">{sessions.length}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Sessions</p>
           </CardContent>
         </Card>
-        <Card className="border-border">
-          <CardContent className="pt-6 text-center">
-            <Trophy className="h-6 w-6 mx-auto text-secondary mb-2" />
-            <p className="text-2xl font-bold">{prs.length}</p>
-            <p className="text-xs text-muted-foreground">Personal Records</p>
+        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <CardContent className="pt-6 text-center relative z-10">
+            <Trophy className="h-7 w-7 mx-auto text-secondary mb-2 drop-shadow-[0_0_8px_hsl(42,100%,50%,0.6)]" />
+            <p className="text-3xl font-bold font-medieval glow-gold-text">{prs.length}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Records</p>
           </CardContent>
         </Card>
-        <Card className="border-border">
-          <CardContent className="pt-6 text-center">
-            <TrendingUp className="h-6 w-6 mx-auto text-secondary mb-2" />
-            <p className="text-2xl font-bold">{latestVolume.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Weekly Volume (lbs)</p>
+        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+          <CardContent className="pt-6 text-center relative z-10">
+            <TrendingUp className="h-7 w-7 mx-auto text-secondary mb-2 drop-shadow-[0_0_8px_hsl(42,100%,50%,0.6)]" />
+            <p className="text-3xl font-bold font-medieval glow-gold-text">{latestVolume.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Weekly Vol</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Quick links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link to="/goals">
-          <Card className="border-border hover:border-primary/50 transition-colors cursor-pointer group">
+          <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-green transition-all duration-500 cursor-pointer group">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 group-hover:text-primary transition-colors">
-                <Target className="h-5 w-5" /> Goals
+              <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-green-text transition-all">
+                <Target className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]" /> Goals
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               {goals.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {goals.slice(0, 3).map(g => (
                     <div key={g.id} className="flex items-center justify-between">
-                      <span className="text-sm truncate">{g.title}</span>
+                      <span className="text-sm truncate font-medieval">{g.title}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-primary">{calculateGoalProgress(g)}%</span>
-                        <Progress value={calculateGoalProgress(g)} className="w-16 h-1.5" />
+                        <span className="text-xs text-primary font-bold">{calculateGoalProgress(g)}%</span>
+                        <Progress value={calculateGoalProgress(g)} className="w-16 h-2" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Create your first goal →</p>
+                <p className="text-sm text-muted-foreground font-medieval italic">Create your first goal →</p>
               )}
             </CardContent>
           </Card>
         </Link>
 
         <Link to="/workouts">
-          <Card className="border-border hover:border-secondary/50 transition-colors cursor-pointer group">
+          <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-gold transition-all duration-500 cursor-pointer group">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 group-hover:text-secondary transition-colors">
-                <Dumbbell className="h-5 w-5" /> Workouts
+              <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-gold-text transition-all">
+                <Dumbbell className="h-6 w-6 text-secondary drop-shadow-[0_0_8px_hsl(42,100%,50%,0.6)]" /> Workouts
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               {prs.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {prs.slice(0, 3).map(pr => (
                     <div key={pr.exercise} className="flex items-center justify-between">
-                      <span className="text-sm">{EXERCISE_LABELS[pr.exercise]}</span>
-                      <span className="text-sm font-medium text-secondary">{pr.weight} lbs</span>
+                      <span className="text-sm font-medieval">{EXERCISE_LABELS[pr.exercise]}</span>
+                      <span className="text-sm font-bold text-secondary glow-gold-text">{pr.weight} lbs</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Start your first session →</p>
+                <p className="text-sm text-muted-foreground font-medieval italic">Start your first session →</p>
               )}
             </CardContent>
           </Card>
         </Link>
       </div>
+
+      <div className="divider-alien" />
     </div>
   );
 }
