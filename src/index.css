@@ -175,3 +175,72 @@
 .animate-flicker {
   animation: flicker 4s ease-in-out infinite;
 }
+
+/* Purple ember glow for entrance animations */
+.ember-glow {
+  background: radial-gradient(ellipse at center, 
+    hsl(280 100% 50% / 0.6) 0%, 
+    hsl(300 80% 40% / 0.4) 25%, 
+    hsl(20 100% 50% / 0.3) 50%, 
+    hsl(42 100% 50% / 0.1) 75%, 
+    transparent 100%
+  );
+  filter: blur(20px);
+}
+
+/* Purple fire particle shimmer */
+@keyframes ember-particle {
+  0% { 
+    opacity: 0; 
+    transform: translateY(10px) scale(0.5); 
+    filter: hue-rotate(0deg);
+  }
+  30% { 
+    opacity: 1; 
+    filter: hue-rotate(-20deg);
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateY(-30px) scale(0); 
+    filter: hue-rotate(30deg);
+  }
+}
+
+.ember-particles::before,
+.ember-particles::after {
+  content: '✦';
+  position: absolute;
+  color: hsl(280 100% 65%);
+  font-size: 8px;
+  animation: ember-particle 2s ease-out infinite;
+  pointer-events: none;
+}
+
+.ember-particles::before {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0.3s;
+}
+
+.ember-particles::after {
+  top: 40%;
+  right: 15%;
+  animation-delay: 0.8s;
+  color: hsl(42 100% 60%);
+}
+
+/* CRT flicker on hover */
+@keyframes crt-flicker {
+  0% { opacity: 1; }
+  3% { opacity: 0.85; }
+  6% { opacity: 1; }
+  7% { opacity: 0.9; }
+  8% { opacity: 1; }
+  50% { opacity: 1; }
+  52% { opacity: 0.92; }
+  53% { opacity: 1; }
+}
+
+.crt-hover:hover {
+  animation: crt-flicker 0.5s ease-in-out;
+}
