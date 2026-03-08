@@ -154,6 +154,35 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
     [blocks, dayName]
   );
 
+  // Auto-populate from repeatable templates
+  useEffect(() => {
+    const templates = loadRepeatableBlocks();
+    const applicableTemplates = templates.filter(t => shouldShowOnDay(t, dayName));
+    const existingBlocks = blocks.filter(b => b.dayName === dayName);
+    
+    const newBlocks: TimeBlock[] = [];
+    for (const tpl of applicableTemplates) {
+      // Check if a block with this template's title already exists for this day
+      const alreadyExists = existingBlocks.some(b => 
+        b.title === tpl.title && b.startHour === tpl.startHour && b.startMinute === tpl.startMinute
+      );
+      if (!alreadyExists) {
+        newBlocks.push({
+          id: generateId(),
+          dayName,
+          categoryId: tpl.categoryId,
+          title: tpl.title,
+          startHour: tpl.startHour,
+          startMinute: tpl.startMinute,
+          durationMinutes: tpl.durationMinutes,
+        });
+      }
+    }
+    if (newBlocks.length > 0) {
+      persist([...blocks, ...newBlocks]);
+    }
+  }, [dayName]); // only on day change
+
   const columnLayout = useMemo(() => computeColumns(dayBlocks), [dayBlocks]);
 
   const persist = useCallback((updated: TimeBlock[]) => {
