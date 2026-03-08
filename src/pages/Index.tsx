@@ -24,7 +24,7 @@ export default function Index() {
           <div className="divider-alien mb-8" />
         </EmberText>
         <FlickerIn>
-          <h1 className="font-gothic text-6xl md:text-7xl gradient-alien-text mb-4 tracking-wide relative ember-particles">
+          <h1 className="font-gothic text-6xl md:text-7xl gradient-alien-text mb-4 tracking-wide relative ember-particles chromatic-aberration">
             GoalForge
           </h1>
         </FlickerIn>
