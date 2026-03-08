@@ -9,10 +9,62 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmberCard, EmberText, FlickerIn } from '@/components/EmberAnimations';
 import { ProgressRing } from '@/components/ProgressRing';
+
+// --- Parser types ---
+interface ParsedTodo { title: string; deadline: string; }
+interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; }
+interface ParsedPhase { title: string; description: string; deadline: string; tasks: ParsedTask[]; }
+interface ParseResult { phases: ParsedPhase[]; warnings: string[]; }
+
+function parseAIResponse(text: string): ParseResult {
+  const lines = text.split('\n');
+  const phases: ParsedPhase[] = [];
+  let currentPhase: ParsedPhase | null = null;
+  let currentTask: ParsedTask | null = null;
+  const warnings: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+
+    const phaseMatch = trimmed.match(/^PHASE:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    if (phaseMatch) {
+      currentPhase = { title: phaseMatch[1].trim(), description: phaseMatch[2].trim(), deadline: phaseMatch[3], tasks: [] };
+      phases.push(currentPhase);
+      currentTask = null;
+      continue;
+    }
+
+    const taskMatch = trimmed.match(/^TASK:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    if (taskMatch) {
+      if (!currentPhase) { warnings.push(`Line ${i + 1}: TASK found before any PHASE, skipped`); continue; }
+      currentTask = { title: taskMatch[1].trim(), description: taskMatch[2].trim(), deadline: taskMatch[3], todos: [] };
+      currentPhase.tasks.push(currentTask);
+      continue;
+    }
+
+    const todoMatch = trimmed.match(/^TODO:\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    if (todoMatch) {
+      if (!currentTask) { warnings.push(`Line ${i + 1}: TODO found before any TASK, skipped`); continue; }
+      currentTask.todos.push({ title: todoMatch[1].trim(), deadline: todoMatch[2] });
+      continue;
+    }
+
+    // Skip non-matching lines silently (comments, blank formatting etc.)
+  }
+
+  if (phases.length === 0) {
+    warnings.push('No PHASE: lines found. Make sure the AI response follows the exact format.');
+  }
+
+  return { phases, warnings };
+}
 
 const statusColors: Record<string, string> = {
   not_started: 'bg-muted text-muted-foreground border border-muted-foreground/20',
