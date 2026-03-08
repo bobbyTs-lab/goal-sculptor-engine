@@ -22,7 +22,7 @@ const emberVariants = {
     transition: {
       duration: 0.7,
       delay,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
       filter: { duration: 1.2, delay },
     },
   }),
