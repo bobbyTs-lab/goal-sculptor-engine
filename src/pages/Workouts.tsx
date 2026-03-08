@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmberCard, EmberText, EmberStagger, FlickerIn } from '@/components/EmberAnimations';
 
 function RestTimer() {
   const [seconds, setSeconds] = useState(90);
@@ -118,10 +119,12 @@ export default function WorkoutsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text">Workout Engine</h1>
-        <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
-      </div>
+      <FlickerIn>
+        <div>
+          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Workout Engine</h1>
+          <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
+        </div>
+      </FlickerIn>
 
       <div className="divider-alien" />
 
