@@ -261,7 +261,7 @@ RULES:
     const goal = goals.find(g => g.id === promptGoal.id);
     if (!goal) return;
 
-    const { generateId } = require('@/lib/storage');
+    const { generateId } = await import('@/lib/storage');
     let totalTasks = 0, totalTodos = 0;
 
     // For each parsed phase, either merge into existing or create new
