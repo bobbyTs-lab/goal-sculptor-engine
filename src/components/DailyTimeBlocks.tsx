@@ -124,6 +124,9 @@ export interface BacklogTodo {
   todoId: string;
   title: string;
   goalTitle: string;
+  goalId?: string;
+  phaseTitle?: string;
+  taskTitle?: string;
 }
 
 interface DailyTimeBlocksProps {
