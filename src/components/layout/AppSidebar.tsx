@@ -41,7 +41,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar texture-parchment texture-cracks scanlines-heavy">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="font-gothic text-2xl gradient-alien-text py-4">
@@ -66,7 +66,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === '/'}
-                        className="relative font-medieval text-base tracking-wide transition-all duration-300 hover:bg-muted/50 group"
+                        className="relative font-medieval text-base tracking-wide transition-all duration-300 hover:bg-muted/50 group glitch-hover"
                         activeClassName="text-primary font-bold"
                       >
                         {/* Active ember glow bar */}
