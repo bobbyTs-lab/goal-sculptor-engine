@@ -119,10 +119,12 @@ export default function WorkoutsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text">Workout Engine</h1>
-        <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
-      </div>
+      <FlickerIn>
+        <div>
+          <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Workout Engine</h1>
+          <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
+        </div>
+      </FlickerIn>
 
       <div className="divider-alien" />
 
