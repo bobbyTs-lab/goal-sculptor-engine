@@ -519,26 +519,10 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                     >
                       {/* Link todo */}
                       {!block.todoId && backlogTodos.length > 0 && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50">
-                              <Link2 className="h-3 w-3" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-2 max-h-48 overflow-y-auto" align="end">
-                            <p className="text-[10px] font-medieval text-muted-foreground mb-1">Link a todo</p>
-                            {backlogTodos.map(t => (
-                              <button
-                                key={t.todoId}
-                                onClick={() => linkTodo(block.id, t.todoId, t.title)}
-                                className="w-full text-left px-2 py-1 text-xs font-medieval rounded hover:bg-primary/10 transition-colors truncate"
-                              >
-                                <span className="text-[9px] text-muted-foreground">{t.goalTitle}</span>
-                                <br />{t.title}
-                              </button>
-                            ))}
-                          </PopoverContent>
-                        </Popover>
+                        <TodoLinkPicker
+                          backlogTodos={backlogTodos}
+                          onLink={(todoId, title) => linkTodo(block.id, todoId, title)}
+                        />
                       )}
                       {block.todoId && (
                         <button onClick={() => unlinkTodo(block.id)} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50" title="Unlink todo">
