@@ -460,14 +460,203 @@ export default function ProgramPage() {
         </Button>
       )}
 
-      {/* UNASSIGNED BACKLOG */}
+      {/* UNASSIGNED BACKLOG — Compact collapsible */}
       <EmberCard delay={0.1}>
         <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-sm font-gothic gradient-alien-text flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Unassigned Backlog
-              <Badge variant="outline" className="ml-auto text-[10px] border-muted/30">{backlog.length}</Badge>
+          <CardContent className="pt-3 pb-3 relative z-10">
+            <CollapsibleBacklog
+              goals={goals}
+              backlog={backlog}
+              focusGoalIds={focusGoalIds}
+              onAssign={assignToDay}
+            />
+          </CardContent>
+        </Card>
+      </EmberCard>
+    </div>
+  );
+}
+
+/* ─── Collapsible Backlog ─── */
+function CollapsibleBacklog({ goals, backlog, focusGoalIds, onAssign }: {
+  goals: ReturnType<typeof useGoals>['goals'];
+  backlog: FlatTodo[];
+  focusGoalIds: string[];
+  onAssign: (day: string, todoId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
+
+  if (backlog.length === 0) {
+    return (
+      <div className="flex items-center gap-2 text-xs font-medieval text-muted-foreground">
+        <CheckCircle2 className="h-3 w-3 text-primary" /> Everything is scheduled!
+      </div>
+    );
+  }
+
+  const goalGroups = [...goals]
+    .sort((a, b) => {
+      const aF = focusGoalIds.includes(a.id) ? -1 : 0;
+      const bF = focusGoalIds.includes(b.id) ? -1 : 0;
+      return aF - bF;
+    })
+    .map(g => ({ goal: g, items: backlog.filter(t => t.goalId === g.id) }))
+    .filter(g => g.items.length > 0);
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full text-left"
+      >
+        <Clock className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-gothic gradient-alien-text">Backlog</span>
+        <Badge variant="outline" className="text-[10px] border-muted/30 ml-1">{backlog.length}</Badge>
+        <span className="ml-auto">
+          {open ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+        </span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-1 overflow-hidden"
+          >
+            {goalGroups.map(({ goal, items }) => {
+              const isFocused = focusGoalIds.includes(goal.id);
+              const isOpen = expandedGoal === goal.id;
+              const progress = calculateGoalProgress(goal);
+              return (
+                <div key={goal.id} className={`rounded-md border ${isFocused ? 'border-secondary/30 bg-secondary/5' : 'border-border/20 bg-muted/5'}`}>
+                  <button
+                    onClick={() => setExpandedGoal(isOpen ? null : goal.id)}
+                    className="flex items-center gap-2 w-full px-2.5 py-1.5 text-left"
+                  >
+                    {isFocused && <Star className="h-3 w-3 text-secondary fill-secondary flex-shrink-0" />}
+                    <span className="text-xs font-medieval font-bold truncate flex-1">{goal.title}</span>
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-muted/30">{items.length}</Badge>
+                    <Progress value={progress} className="w-12 h-1 ml-1" />
+                    {isOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
+                  </button>
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="px-2.5 pb-2 space-y-0.5 overflow-hidden"
+                      >
+                        {items.map(todo => {
+                          const daysLeft = getDaysRemaining(todo.deadline);
+                          return (
+                            <div key={todo.todoId} className="flex items-center gap-2 text-xs font-medieval py-0.5">
+                              <span className="w-1 h-1 rounded-full bg-primary/50 flex-shrink-0" />
+                              <span className="truncate flex-1">{todo.todoTitle}</span>
+                              {daysLeft !== null && (
+                                <span className={`text-[9px] flex-shrink-0 ${getUrgencyColor(daysLeft)}`}>
+                                  {daysLeft < 0 ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d`}
+                                </span>
+                              )}
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="flex items-center text-[10px] text-primary hover:text-primary/80 transition-colors flex-shrink-0">
+                                    <ArrowRight className="h-3 w-3" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-2" align="end">
+                                  <div className="grid grid-cols-4 gap-1">
+                                    {DAYS.map((d, i) => (
+                                      <button
+                                        key={d}
+                                        onClick={() => onAssign(d, todo.todoId)}
+                                        className="px-2 py-1 text-[10px] font-medieval rounded border border-border/30 hover:bg-primary/20 hover:border-primary/40 transition-colors"
+                                      >
+                                        {DAY_SHORT[i]}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── Day Todo List ─── */
+function DayTodoList({ dayName, todos, onToggle, onUnassign }: {
+  dayName: string;
+  todos: FlatTodo[];
+  onToggle: (todo: FlatTodo) => void;
+  onUnassign: (dayName: string, todoId: string) => void;
+}) {
+  if (todos.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground font-medieval italic">
+        No to-dos assigned. Use the backlog below to add some.
+      </p>
+    );
+  }
+
+  const grouped = todos.reduce<Record<string, FlatTodo[]>>((acc, t) => {
+    if (!acc[t.goalId]) acc[t.goalId] = [];
+    acc[t.goalId].push(t);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(grouped).map(([goalId, items]) => (
+        <div key={goalId} className="space-y-1">
+          <div className="text-[10px] font-medieval text-muted-foreground uppercase tracking-wide">
+            {items[0].goalTitle}
+          </div>
+          {items.map(todo => {
+            const daysLeft = getDaysRemaining(todo.deadline);
+            return (
+              <div key={todo.todoId} className="flex items-center gap-2 group">
+                <Checkbox 
+                  checked={todo.done} 
+                  onCheckedChange={() => onToggle(todo)}
+                  className="h-3.5 w-3.5"
+                />
+                <span className={`text-xs font-medieval flex-1 truncate ${todo.done ? 'line-through text-muted-foreground' : ''}`}>
+                  {todo.todoTitle}
+                </span>
+                {daysLeft !== null && (
+                  <span className={`text-[9px] ${getUrgencyColor(daysLeft)}`}>
+                    {daysLeft < 0 ? `${Math.abs(daysLeft)}d late` : daysLeft === 0 ? 'today' : `${daysLeft}d`}
+                  </span>
+                )}
+                <span className="text-[9px] text-muted-foreground">{todo.phaseTitle}</span>
+                <button
+                  onClick={() => onUnassign(dayName, todo.todoId)}
+                  className="opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
