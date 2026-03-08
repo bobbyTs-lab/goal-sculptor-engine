@@ -62,7 +62,7 @@ export default function Index() {
       <EmberStagger className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <EmberCard delay={0}>
           <Link to="/goals">
-            <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-green transition-all duration-500 cursor-pointer group crt-hover">
+            <Card className="border-runic border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-green transition-all duration-500 cursor-pointer group crt-hover texture-cracks texture-parchment drip-edge patina-stain">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-green-text transition-all">
                   <Target className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]" /> Goals
