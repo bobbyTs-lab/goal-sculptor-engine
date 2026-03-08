@@ -257,10 +257,6 @@ RULES:
 - Do NOT add explanations or commentary
 - Output ONLY the plan`;
   };
-- Dates MUST be YYYY-MM-DD
-- Do NOT add explanations or commentary
-- Output ONLY the plan`;
-  };
 
   const copyPrompt = (goal: Goal) => {
     navigator.clipboard.writeText(generateAIPrompt(goal));
