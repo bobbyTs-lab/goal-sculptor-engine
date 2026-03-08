@@ -26,6 +26,7 @@ function AnimatedRoutes() {
           <Route path="/goals" element={<Goals />} />
           <Route path="/workouts" element={<Workouts />} />
           <Route path="/program" element={<Program />} />
+          <Route path="/people" element={<People />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

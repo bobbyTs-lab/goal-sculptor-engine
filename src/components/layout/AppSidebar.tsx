@@ -19,6 +19,7 @@ const navItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Program", url: "/program", icon: Calendar },
   { title: "Goals", url: "/goals", icon: Target },
+  { title: "People", url: "/people", icon: Users },
   { title: "Workouts", url: "/workouts", icon: Dumbbell },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
