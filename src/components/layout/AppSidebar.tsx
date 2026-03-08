@@ -1,7 +1,6 @@
-import { Target, Dumbbell, Download, Home } from "lucide-react";
+import { Target, Dumbbell, Home, Settings } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
-import { exportAllData } from "@/lib/storage";
 import { motion } from "framer-motion";
 import {
   Sidebar,
@@ -15,12 +14,12 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
 const navItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Workouts", url: "/workouts", icon: Dumbbell },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -28,17 +27,6 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-
-  const handleExport = () => {
-    const data = exportAllData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'goalforge-export.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
@@ -126,23 +114,6 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-2">
         <div className="divider-alien mx-2 mb-2" />
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleExport}
-            className="w-full justify-start text-muted-foreground hover:text-secondary transition-all font-medieval group"
-          >
-            <motion.span
-              className="inline-flex mr-2"
-              whileHover={{ rotate: 180, filter: 'drop-shadow(0 0 6px hsl(42 100% 50% / 0.6))' }}
-              transition={{ duration: 0.4 }}
-            >
-              <Download className="h-4 w-4" />
-            </motion.span>
-            {!collapsed && "Export Data"}
-          </Button>
-        </motion.div>
       </SidebarFooter>
     </Sidebar>
   );

@@ -9,6 +9,7 @@ import { PageTransition } from "@/components/PageTransition";
 import Index from "./pages/Index";
 import Goals from "./pages/Goals";
 import Workouts from "./pages/Workouts";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<Index />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/workouts" element={<Workouts />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>

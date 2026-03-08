@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useGoals } from '@/hooks/useGoals';
-import { Goal, calculateGoalProgress, calculatePhaseProgress, calculateTaskProgress, deriveTaskStatus } from '@/types/goals';
+import { Goal, calculateGoalProgress, calculatePhaseProgress, calculateTaskProgress, deriveTaskStatus, getDaysRemaining, getUrgencyClass, getUrgencyColor } from '@/types/goals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmberCard, EmberText, FlickerIn } from '@/components/EmberAnimations';
+import { ProgressRing } from '@/components/ProgressRing';
 
 const statusColors: Record<string, string> = {
   not_started: 'bg-muted text-muted-foreground border border-muted-foreground/20',
@@ -25,6 +25,19 @@ const statusLabels: Record<string, string> = {
   in_progress: 'In Progress',
   complete: 'Complete',
 };
+
+function DeadlineBadge({ deadline }: { deadline?: string }) {
+  const days = getDaysRemaining(deadline);
+  if (days === null) return null;
+  const color = getUrgencyColor(days);
+  const urgency = getUrgencyClass(days);
+  return (
+    <span className={`text-xs font-medieval flex items-center gap-1 ${color} ${urgency}`}>
+      <Clock className="h-3 w-3" />
+      {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`}
+    </span>
+  );
+}
 
 export default function GoalsPage() {
   const {
@@ -43,9 +56,10 @@ export default function GoalsPage() {
   const [addPhaseGoalId, setAddPhaseGoalId] = useState<string | null>(null);
   const [newPhase, setNewPhase] = useState({ title: '', description: '', deadline: '' });
   const [addTaskTarget, setAddTaskTarget] = useState<{ goalId: string; phaseId: string } | null>(null);
-  const [newTask, setNewTask] = useState({ title: '', description: '' });
+  const [newTask, setNewTask] = useState({ title: '', description: '', deadline: '' });
   const [addTodoTarget, setAddTodoTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState('');
+  const [newTodoDeadline, setNewTodoDeadline] = useState('');
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
 
   const toggle = (set: Set<string>, id: string, setter: (s: Set<string>) => void) => {
@@ -72,15 +86,16 @@ export default function GoalsPage() {
 
   const handleAddTask = () => {
     if (!addTaskTarget || !newTask.title.trim()) return;
-    addTask(addTaskTarget.goalId, addTaskTarget.phaseId, newTask.title, newTask.description);
-    setNewTask({ title: '', description: '' });
+    addTask(addTaskTarget.goalId, addTaskTarget.phaseId, newTask.title, newTask.description, newTask.deadline || undefined);
+    setNewTask({ title: '', description: '', deadline: '' });
     setAddTaskTarget(null);
   };
 
   const handleAddTodo = () => {
     if (!addTodoTarget || !newTodoTitle.trim()) return;
-    addToDo(addTodoTarget.goalId, addTodoTarget.phaseId, addTodoTarget.taskId, newTodoTitle);
+    addToDo(addTodoTarget.goalId, addTodoTarget.phaseId, addTodoTarget.taskId, newTodoTitle, newTodoDeadline || undefined);
     setNewTodoTitle('');
+    setNewTodoDeadline('');
     setAddTodoTarget(null);
   };
 
@@ -172,9 +187,10 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
         goals.map((goal, goalIdx) => {
           const progress = calculateGoalProgress(goal);
           const isExpanded = expandedGoals.has(goal.id);
+          const goalDays = getDaysRemaining(goal.deadline);
           return (
             <EmberCard key={goal.id} delay={goalIdx * 0.12}>
-            <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
+            <Card className={`border-rough relative overflow-hidden scanlines bg-card/80 crt-hover ${getUrgencyClass(goalDays)}`}>
               <Collapsible open={isExpanded} onOpenChange={() => toggle(expandedGoals, goal.id, setExpandedGoals)}>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors relative z-10">
@@ -183,15 +199,13 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
                         {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                         <div>
                           <CardTitle className="text-lg font-medieval">{goal.title}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">{goal.description}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <p className="text-sm text-muted-foreground">{goal.description}</p>
+                            <DeadlineBadge deadline={goal.deadline} />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-primary glow-green-text">{progress}%</span>
-                          <Progress value={progress} className="w-24 h-2 mt-1" />
-                        </div>
-                      </div>
+                      <ProgressRing value={progress} size={48} strokeWidth={4} />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -229,7 +243,8 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
                                 <div className="flex items-center gap-2">
                                   {phaseExpanded ? <ChevronDown className="h-4 w-4 text-secondary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                   <span className="font-medieval font-bold">{phase.title}</span>
-                                  <Badge variant="outline" className="text-xs border-primary/30">{phaseProgress}%</Badge>
+                                  <ProgressRing value={phaseProgress} size={28} strokeWidth={2.5} />
+                                  <DeadlineBadge deadline={phase.deadline} />
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Button size="sm" variant="ghost" className="h-7 text-xs font-medieval" onClick={(e) => { e.stopPropagation(); setAddTaskTarget({ goalId: goal.id, phaseId: phase.id }); }}>
@@ -256,6 +271,7 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
                                             <span className="text-sm font-medieval">{task.title}</span>
                                             <Badge className={`text-xs ${statusColors[status]}`}>{statusLabels[status]}</Badge>
                                             <span className="text-xs text-muted-foreground">{taskProgress}%</span>
+                                            <DeadlineBadge deadline={task.deadline} />
                                           </div>
                                           <div className="flex gap-1">
                                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
@@ -276,6 +292,7 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
                                                 onCheckedChange={() => toggleToDo(goal.id, phase.id, task.id, todo.id)}
                                               />
                                               <span className={`text-sm ${todo.done ? 'line-through text-muted-foreground' : ''}`}>{todo.title}</span>
+                                              <DeadlineBadge deadline={todo.deadline} />
                                               <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteToDo(goal.id, phase.id, task.id, todo.id)}>
                                                 <Trash2 className="h-3 w-3" />
                                               </Button>
@@ -314,7 +331,10 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
           <div className="space-y-3 mt-2">
             <Input placeholder="Phase title" value={newPhase.title} onChange={e => setNewPhase({ ...newPhase, title: e.target.value })} className="border-rough" />
             <Textarea placeholder="Description" value={newPhase.description} onChange={e => setNewPhase({ ...newPhase, description: e.target.value })} className="border-rough" />
-            <Input type="date" value={newPhase.deadline} onChange={e => setNewPhase({ ...newPhase, deadline: e.target.value })} className="border-rough" />
+            <div>
+              <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Deadline</label>
+              <Input type="date" value={newPhase.deadline} onChange={e => setNewPhase({ ...newPhase, deadline: e.target.value })} className="mt-1 border-rough" />
+            </div>
             <Button onClick={handleAddPhase} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">Add Phase</Button>
           </div>
         </DialogContent>
@@ -327,6 +347,10 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
           <div className="space-y-3 mt-2">
             <Input placeholder="Task title" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} className="border-rough" />
             <Textarea placeholder="Description" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} className="border-rough" />
+            <div>
+              <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Deadline</label>
+              <Input type="date" value={newTask.deadline} onChange={e => setNewTask({ ...newTask, deadline: e.target.value })} className="mt-1 border-rough" />
+            </div>
             <Button onClick={handleAddTask} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">Add Task</Button>
           </div>
         </DialogContent>
@@ -338,6 +362,10 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
           <DialogHeader><DialogTitle className="font-gothic gradient-alien-text text-xl">Add To-Do</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             <Input placeholder="To-do item" value={newTodoTitle} onChange={e => setNewTodoTitle(e.target.value)} className="border-rough" />
+            <div>
+              <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Deadline (optional)</label>
+              <Input type="date" value={newTodoDeadline} onChange={e => setNewTodoDeadline(e.target.value)} className="mt-1 border-rough" />
+            </div>
             <Button onClick={handleAddTodo} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">Add To-Do</Button>
           </div>
         </DialogContent>
