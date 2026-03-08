@@ -355,8 +355,8 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
   return (
     <div className="flex flex-col h-full space-y-2 p-2">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medieval text-muted-foreground">Click timeline to add · Drag to move · Drag bottom to resize</span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-[10px] md:text-xs font-medieval text-muted-foreground">Tap to add · Drag to move</span>
         <Button variant="ghost" size="sm" className="ml-auto text-xs font-medieval gap-1" onClick={() => setShowCategoryManager(!showCategoryManager)}>
           <Palette className="h-3.5 w-3.5" />
           Categories
