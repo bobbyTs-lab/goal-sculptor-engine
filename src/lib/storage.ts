@@ -1,6 +1,7 @@
 import { Goal } from '@/types/goals';
 import { WorkoutSession, ExerciseConfig, WeeklyPlan } from '@/types/workout';
 import { DEFAULT_CONFIGS } from '@/types/workout';
+import { UnlockedAchievement } from '@/lib/achievements';
 
 const KEYS = {
   GOALS: 'goalforge_goals',
@@ -8,17 +9,30 @@ const KEYS = {
   EXERCISE_CONFIGS: 'goalforge_exercise_configs',
   WEEKLY_PLAN: 'goalforge_weekly_plan',
   SETTINGS: 'goalforge_settings',
+  ACHIEVEMENTS: 'goalforge_achievements',
+  TEMPLATES: 'goalforge_templates',
 } as const;
 
 export interface AppSettings {
   quotesEnabled: boolean;
   customQuotes: string[];
+  bodyweight: number;
+  ambientSoundEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   quotesEnabled: true,
   customQuotes: [],
+  bodyweight: 180,
+  ambientSoundEnabled: false,
 };
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  splitDay: string;
+  exercises: { exercise: string; sets: number; weight: number; reps: number }[];
+}
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -48,8 +62,19 @@ export const loadWeeklyPlan = (): WeeklyPlan | null => load(KEYS.WEEKLY_PLAN, nu
 export const saveWeeklyPlan = (plan: WeeklyPlan) => save(KEYS.WEEKLY_PLAN, plan);
 
 // Settings
-export const loadSettings = (): AppSettings => load(KEYS.SETTINGS, DEFAULT_SETTINGS);
+export const loadSettings = (): AppSettings => {
+  const saved = load<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  return { ...DEFAULT_SETTINGS, ...saved };
+};
 export const saveSettings = (settings: AppSettings) => save(KEYS.SETTINGS, settings);
+
+// Achievements
+export const loadAchievements = (): UnlockedAchievement[] => load(KEYS.ACHIEVEMENTS, []);
+export const saveAchievements = (achievements: UnlockedAchievement[]) => save(KEYS.ACHIEVEMENTS, achievements);
+
+// Templates
+export const loadTemplates = (): WorkoutTemplate[] => load(KEYS.TEMPLATES, []);
+export const saveTemplates = (templates: WorkoutTemplate[]) => save(KEYS.TEMPLATES, templates);
 
 // Export all data
 export function exportAllData(): string {
@@ -59,6 +84,8 @@ export function exportAllData(): string {
     exerciseConfigs: loadExerciseConfigs(),
     weeklyPlan: loadWeeklyPlan(),
     settings: loadSettings(),
+    achievements: loadAchievements(),
+    templates: loadTemplates(),
   }, null, 2);
 }
 
@@ -69,6 +96,8 @@ export function importAllData(data: Record<string, unknown>) {
   if (data.exerciseConfigs) saveExerciseConfigs(data.exerciseConfigs as ExerciseConfig[]);
   if (data.weeklyPlan) saveWeeklyPlan(data.weeklyPlan as WeeklyPlan);
   if (data.settings) saveSettings(data.settings as AppSettings);
+  if (data.achievements) saveAchievements(data.achievements as UnlockedAchievement[]);
+  if (data.templates) saveTemplates(data.templates as WorkoutTemplate[]);
 }
 
 // Clear all data

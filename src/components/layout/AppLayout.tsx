@@ -1,7 +1,12 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { AmbientSound } from "@/components/AmbientSound";
+import { loadSettings } from "@/lib/storage";
+import { useState } from "react";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const [settings] = useState(() => loadSettings());
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -11,6 +16,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
             <SidebarTrigger className="mr-4 relative z-10" />
             <h1 className="font-gothic text-3xl gradient-alien-text animate-flicker relative z-10">GoalForge</h1>
+            <div className="ml-auto relative z-10">
+              <AmbientSound enabled={settings.ambientSoundEnabled} />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
             {children}
