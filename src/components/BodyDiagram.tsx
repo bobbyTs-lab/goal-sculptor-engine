@@ -134,170 +134,127 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
       </CardHeader>
       <CardContent className="relative z-10">
         <div className="flex items-start gap-4">
-          <svg viewBox="0 0 500 500" className="w-56 h-56 md:w-64 md:h-64 mx-auto flex-shrink-0">
+          <svg viewBox="0 0 500 520" className="w-60 h-60 md:w-72 md:h-72 mx-auto flex-shrink-0">
             <defs>
-              {/* Animated dash for golden spiral */}
               <style>{`
-                @keyframes dash-flow {
-                  to { stroke-dashoffset: -40; }
-                }
-                .spiral-line {
-                  animation: dash-flow 3s linear infinite;
-                }
-                @keyframes tick-fade {
-                  0%, 100% { opacity: 0.15; }
-                  50% { opacity: 0.4; }
-                }
-                .tick-mark {
-                  animation: tick-fade 4s ease-in-out infinite;
-                }
+                @keyframes dash-flow { to { stroke-dashoffset: -40; } }
+                .spiral-line { animation: dash-flow 3s linear infinite; }
+                @keyframes tick-fade { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.35; } }
+                .tick-mark { animation: tick-fade 4s ease-in-out infinite; }
               `}</style>
             </defs>
 
             {/* Vitruvian circle */}
-            <circle cx="250" cy="250" r="220" fill="none" stroke="hsl(130 100% 40% / 0.08)" strokeWidth={1} />
+            <circle cx="250" cy="260" r="230" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={0.6} />
             {/* Vitruvian square */}
-            <rect x="80" y="48" width="340" height="420" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={1} rx="2" />
+            <rect x="68" y="42" width="364" height="448" fill="none" stroke="hsl(42 100% 50% / 0.04)" strokeWidth={0.5} />
 
-            {/* Golden ratio spiral — approximated with arcs */}
-            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.12)" strokeWidth={0.7} strokeDasharray="8 12">
-              <path d="M 250 250 
-                Q 250 180, 310 180 
-                Q 370 180, 370 240 
-                Q 370 320, 300 340 
-                Q 230 360, 210 300 
-                Q 190 240, 230 220 
-                Q 260 200, 270 230 
-                Q 280 255, 258 260 
-                Q 240 265, 245 250" />
+            {/* Golden spiral */}
+            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.1)" strokeWidth={0.5} strokeDasharray="6 10">
+              <path d="M250 260 C250 200,300 180,330 190 C370 200,380 250,370 280 C355 330,310 350,280 345 C250 340,235 310,240 290 C245 270,255 262,250 260" />
             </g>
-            {/* Secondary spiral — mirrored, offset phase */}
-            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.07)" strokeWidth={0.5} strokeDasharray="6 14" style={{ animationDelay: '1.5s' }}>
-              <path d="M 250 250 
-                Q 250 320, 190 320 
-                Q 130 320, 130 260 
-                Q 130 180, 200 160 
-                Q 270 140, 290 200 
-                Q 310 260, 270 280 
-                Q 240 300, 230 270 
-                Q 220 245, 242 240 
-                Q 260 235, 255 250" />
+            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={0.4} strokeDasharray="5 12" style={{ animationDelay: '1.5s' }}>
+              <path d="M250 260 C250 320,200 340,170 330 C130 320,120 270,130 240 C145 190,190 170,220 175 C250 180,265 210,260 230 C255 248,250 258,250 260" />
             </g>
 
-            {/* Measurement tick marks along circle */}
+            {/* Tick marks around circle */}
             {Array.from({ length: 36 }).map((_, i) => {
-              const angle = (i * 10) * Math.PI / 180;
-              const r1 = 216;
-              const r2 = i % 3 === 0 ? 228 : 224;
-              const x1 = 250 + r1 * Math.cos(angle);
-              const y1 = 250 + r1 * Math.sin(angle);
-              const x2 = 250 + r2 * Math.cos(angle);
-              const y2 = 250 + r2 * Math.sin(angle);
+              const a = (i * 10) * Math.PI / 180;
+              const r1 = 226, r2 = i % 3 === 0 ? 237 : 232;
               return (
-                <line key={`tick-c-${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke="hsl(42 100% 50% / 0.2)" strokeWidth={i % 3 === 0 ? 0.8 : 0.4}
+                <line key={`t${i}`} x1={250 + r1 * Math.cos(a)} y1={260 + r1 * Math.sin(a)}
+                  x2={250 + r2 * Math.cos(a)} y2={260 + r2 * Math.sin(a)}
+                  stroke="hsl(42 100% 50% / 0.15)" strokeWidth={i % 3 === 0 ? 0.6 : 0.3}
                   className="tick-mark" style={{ animationDelay: `${i * 0.1}s` }} />
               );
             })}
 
-            {/* Measurement tick marks along square edges (top & bottom) */}
-            {Array.from({ length: 18 }).map((_, i) => {
-              const x = 80 + (i + 1) * (340 / 19);
-              return (
-                <g key={`tick-s-${i}`} className="tick-mark" style={{ animationDelay: `${i * 0.15}s` }}>
-                  <line x1={x} y1={48} x2={x} y2={i % 3 === 0 ? 56 : 52}
-                    stroke="hsl(42 100% 50% / 0.15)" strokeWidth={i % 3 === 0 ? 0.7 : 0.3} />
-                  <line x1={x} y1={468} x2={x} y2={i % 3 === 0 ? 460 : 464}
-                    stroke="hsl(42 100% 50% / 0.15)" strokeWidth={i % 3 === 0 ? 0.7 : 0.3} />
-                </g>
-              );
-            })}
+            {/* Proportion guides */}
+            <line x1="250" y1="30" x2="250" y2="500" stroke="hsl(42 100% 50% / 0.03)" strokeWidth={0.4} strokeDasharray="3 8" />
+            <line x1="50" y1="260" x2="450" y2="260" stroke="hsl(42 100% 50% / 0.03)" strokeWidth={0.4} strokeDasharray="3 8" />
 
-            {/* Proportion lines — Da Vinci measurement guides */}
-            <line x1="250" y1="30" x2="250" y2="470" stroke="hsl(42 100% 50% / 0.04)" strokeWidth={0.5} strokeDasharray="4 8" />
-            <line x1="60" y1="250" x2="440" y2="250" stroke="hsl(42 100% 50% / 0.04)" strokeWidth={0.5} strokeDasharray="4 8" />
+            {/* ===== ORGANIC BODY — Smooth curves ===== */}
 
-            {/* === BODY — Arms outstretched, classical proportions === */}
+            {/* Head — oval with slight jaw taper */}
+            <path d="M250 50 C270 50,282 62,282 80 C282 98,270 112,258 114 C254 115,246 115,242 114 C230 112,218 98,218 80 C218 62,230 50,250 50Z" fill="hsl(140 12% 18%)" stroke="hsl(130 20% 25%)" strokeWidth={0.6} />
 
-            {/* Head */}
-            <ellipse cx="250" cy="78" rx="22" ry="28" fill="hsl(140 12% 18%)" stroke="hsl(130 20% 25%)" strokeWidth={0.8} />
             {/* Neck */}
-            <rect x="242" y="104" width="16" height="14" rx="3" fill="hsl(140 12% 16%)" />
+            <path d="M240 114 C240 114,242 126,243 130 L257 130 C258 126,260 114,260 114" fill="hsl(140 12% 16%)" stroke="hsl(130 18% 22%)" strokeWidth={0.4} />
 
-            {/* Traps */}
+            {/* Traps — curved mounds */}
             <MusclePath muscle="traps" ratio={muscleRatios.traps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'traps'}
-              d="M222 114 Q236 108 250 112 Q264 108 278 114 L274 128 Q250 122 226 128 Z" />
+              d="M222 126 C230 118,242 116,250 118 C258 116,270 118,278 126 L276 140 C268 134,258 130,250 131 C242 130,232 134,224 140 Z" />
 
-            {/* Shoulders — broad rounded deltoids */}
+            {/* Shoulders — rounded deltoid caps */}
             <MusclePath muscle="shoulders" ratio={muscleRatios.shoulders} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'shoulders'}
-              d="M196 120 Q204 110 218 114 L226 120 L222 140 Q210 138 198 134 Z" />
+              d="M222 126 C210 120,196 122,190 130 C186 136,186 144,190 150 L210 148 C216 142,220 136,222 130 Z" />
             <MusclePath muscle="shoulders" ratio={muscleRatios.shoulders} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'shoulders'}
-              d="M304 120 Q296 110 282 114 L274 120 L278 140 Q290 138 302 134 Z" />
+              d="M278 126 C290 120,304 122,310 130 C314 136,314 144,310 150 L290 148 C284 142,280 136,278 130 Z" />
 
-            {/* Chest */}
+            {/* Chest — two pec shapes with natural curve */}
             <MusclePath muscle="chest" ratio={muscleRatios.chest} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'chest'}
-              d="M224 122 Q237 118 250 120 Q263 118 276 122 L274 152 Q263 158 250 156 Q237 158 226 152 Z" />
+              d="M224 136 C228 130,238 128,250 130 C262 128,272 130,276 136 L276 160 C270 168,262 172,250 170 C238 172,230 168,224 160 Z" />
 
-            {/* === OUTSTRETCHED ARMS === */}
-            {/* Left upper arm — angled outward */}
-            {/* Biceps left */}
+            {/* === OUTSTRETCHED ARMS — smooth tapered limbs === */}
+
+            {/* Left bicep */}
             <MusclePath muscle="biceps" ratio={muscleRatios.biceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'biceps'}
-              d="M194 128 L186 126 L146 140 L140 148 L150 152 L190 140 Z" />
-            {/* Triceps left */}
+              d="M190 134 C182 132,170 134,154 142 C142 148,132 154,128 158 L136 166 C142 160,156 152,168 148 C180 144,188 142,192 144 Z" />
+            {/* Left tricep */}
             <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
-              d="M190 140 L150 152 L146 160 L152 164 L192 150 L196 142 Z" />
+              d="M192 148 C186 150,172 154,158 160 C144 166,134 172,128 176 L136 166 C128 170,126 174,128 178 L140 178 C152 172,170 164,184 158 C192 154,194 152,192 148Z" />
 
-            {/* Biceps right */}
+            {/* Right bicep */}
             <MusclePath muscle="biceps" ratio={muscleRatios.biceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'biceps'}
-              d="M306 128 L314 126 L354 140 L360 148 L350 152 L310 140 Z" />
-            {/* Triceps right */}
+              d="M310 134 C318 132,330 134,346 142 C358 148,368 154,372 158 L364 166 C358 160,344 152,332 148 C320 144,312 142,308 144 Z" />
+            {/* Right tricep */}
             <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
-              d="M310 140 L350 152 L354 160 L348 164 L308 150 L304 142 Z" />
+              d="M308 148 C314 150,328 154,342 160 C356 166,366 172,372 176 L364 166 C372 170,374 174,372 178 L360 178 C348 172,330 164,316 158 C308 154,306 152,308 148Z" />
 
-            {/* Forearms left */}
+            {/* Left forearm */}
             <MusclePath muscle="forearms" ratio={muscleRatios.forearms} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'forearms'}
-              d="M140 148 L92 168 L86 176 L92 180 L146 160 Z" />
-            {/* Forearms right */}
+              d="M128 162 C118 168,100 178,86 186 C80 190,76 194,74 198 L82 202 C86 196,96 190,110 182 C122 176,132 170,136 168 Z" />
+            {/* Right forearm */}
             <MusclePath muscle="forearms" ratio={muscleRatios.forearms} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'forearms'}
-              d="M360 148 L408 168 L414 176 L408 180 L354 160 Z" />
+              d="M372 162 C382 168,400 178,414 186 C420 190,424 194,426 198 L418 202 C414 196,404 190,390 182 C378 176,368 170,364 168 Z" />
 
-            {/* Hands */}
-            <ellipse cx="82" cy="176" rx="10" ry="7" fill="hsl(140 12% 16%)" transform="rotate(-15 82 176)" />
-            <ellipse cx="418" cy="176" rx="10" ry="7" fill="hsl(140 12% 16%)" transform="rotate(15 418 176)" />
+            {/* Hands — organic rounded */}
+            <path d="M74 198 C68 200,62 206,60 212 C58 218,62 222,68 220 C72 218,78 212,82 206 Z" fill="hsl(140 12% 16%)" />
+            <path d="M426 198 C432 200,438 206,440 212 C442 218,438 222,432 220 C428 218,422 212,418 206 Z" fill="hsl(140 12% 16%)" />
 
-            {/* Lats */}
+            {/* Lats — side torso sweep */}
             <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
-              d="M214 140 L224 152 L222 180 Q214 174 210 164 Z" />
+              d="M210 148 C208 156,206 168,208 180 C210 192,214 196,218 192 L224 160 C222 152,216 148,210 148Z" />
             <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
-              d="M286 140 L276 152 L278 180 Q286 174 290 164 Z" />
+              d="M290 148 C292 156,294 168,292 180 C290 192,286 196,282 192 L276 160 C278 152,284 148,290 148Z" />
 
-            {/* Core / Abs */}
+            {/* Core — ab column with subtle narrowing at waist */}
             <MusclePath muscle="core" ratio={muscleRatios.core} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'core'}
-              d="M228 156 Q239 152 250 154 Q261 152 272 156 L270 232 Q260 238 250 236 Q240 238 230 232 Z" />
+              d="M230 164 C236 160,244 158,250 159 C256 158,264 160,270 164 L268 240 C264 248,258 252,250 252 C242 252,236 248,232 240 Z" />
 
-            {/* Glutes */}
+            {/* Glutes — rounded seat */}
             <MusclePath muscle="glutes" ratio={muscleRatios.glutes} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'glutes'}
-              d="M224 232 Q236 228 250 230 Q264 228 276 232 L274 256 Q262 262 250 260 Q238 262 226 256 Z" />
+              d="M226 244 C232 238,240 236,250 237 C260 236,268 238,274 244 L274 268 C268 278,260 282,250 282 C240 282,232 278,226 268 Z" />
 
-            {/* Quads */}
+            {/* Quads — tapered thighs with natural curve */}
             <MusclePath muscle="quads" ratio={muscleRatios.quads} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'quads'}
-              d="M222 258 Q232 252 242 256 L238 358 Q228 362 218 356 Z" />
+              d="M226 268 C228 264,234 260,240 262 L238 374 C234 380,228 382,222 378 C218 374,218 368,220 360 Z" />
             <MusclePath muscle="quads" ratio={muscleRatios.quads} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'quads'}
-              d="M278 258 Q268 252 258 256 L262 358 Q272 362 282 356 Z" />
+              d="M274 268 C272 264,266 260,260 262 L262 374 C266 380,272 382,278 378 C282 374,282 368,280 360 Z" />
 
-            {/* Hamstrings */}
+            {/* Hamstrings — inner thigh */}
             <MusclePath muscle="hamstrings" ratio={muscleRatios.hamstrings} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'hamstrings'}
-              d="M242 258 L250 256 L258 258 L258 354 Q250 358 242 354 Z" />
+              d="M242 264 C246 260,250 259,254 260 C258 260,260 262,260 264 L258 372 C254 376,246 376,242 372 Z" />
 
-            {/* Calves */}
+            {/* Calves — diamond-shaped with taper */}
             <MusclePath muscle="calves" ratio={muscleRatios.calves} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'calves'}
-              d="M220 362 Q230 356 238 360 L234 434 Q226 438 216 432 Z" />
+              d="M222 382 C226 376,232 374,236 378 L236 386 C238 400,236 420,232 440 C230 448,226 452,222 448 C218 440,216 420,218 400 C218 392,220 386,222 382Z" />
             <MusclePath muscle="calves" ratio={muscleRatios.calves} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'calves'}
-              d="M280 362 Q270 356 262 360 L266 434 Q274 438 284 432 Z" />
+              d="M278 382 C274 376,268 374,264 378 L264 386 C262 400,264 420,268 440 C270 448,274 452,278 448 C282 440,284 420,282 400 C282 392,280 386,278 382Z" />
 
-            {/* Feet */}
-            <ellipse cx="226" cy="444" rx="14" ry="6" fill="hsl(140 12% 16%)" />
-            <ellipse cx="274" cy="444" rx="14" ry="6" fill="hsl(140 12% 16%)" />
+            {/* Feet — natural foot shapes */}
+            <path d="M218 448 C214 452,208 456,210 462 C212 466,222 468,232 464 C236 462,236 456,234 452 Z" fill="hsl(140 12% 16%)" />
+            <path d="M282 448 C286 452,292 456,290 462 C288 466,278 468,268 464 C264 462,264 456,266 452 Z" fill="hsl(140 12% 16%)" />
           </svg>
 
           {/* Info panel */}
