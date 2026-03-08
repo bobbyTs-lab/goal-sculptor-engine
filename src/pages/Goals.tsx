@@ -117,7 +117,7 @@ Keep tasks concrete and measurable. To-dos should be small enough to complete in
       <div className="flex items-center justify-between">
         <FlickerIn>
           <div>
-            <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">Goals</h1>
+            <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative chromatic-aberration">Goals</h1>
             <p className="text-muted-foreground mt-1 font-medieval">
               {goals.length} goal{goals.length !== 1 ? 's' : ''} active
             </p>
