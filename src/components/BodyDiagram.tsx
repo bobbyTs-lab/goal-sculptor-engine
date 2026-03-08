@@ -164,7 +164,7 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
               return (
                 <line key={`t${i}`} x1={250 + r1 * Math.cos(a)} y1={260 + r1 * Math.sin(a)}
                   x2={250 + r2 * Math.cos(a)} y2={260 + r2 * Math.sin(a)}
-                  stroke="hsl(42 100% 50% / 0.15)" strokeWidth={i % 3 === 0 ? 0.6 : 0.3}
+                  stroke="hsl(42 100% 50% / 0.4)" strokeWidth={i % 3 === 0 ? 0.8 : 0.4}
                   className="tick-mark" style={{ animationDelay: `${i * 0.1}s` }} />
               );
             })}
