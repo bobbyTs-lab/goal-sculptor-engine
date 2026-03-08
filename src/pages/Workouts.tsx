@@ -170,7 +170,7 @@ export default function WorkoutsPage() {
             const suggestion = config ? getProgressionSuggestion(config, recentHistory) : null;
 
             return (
-              <Card key={exIdx} className="border-rough relative overflow-hidden scanlines bg-card/80">
+              <Card key={exIdx} className="border-runic relative overflow-hidden scanlines bg-card/80 texture-parchment drip-edge glitch-hover">
                 <CardHeader className="pb-2 relative z-10">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2 font-medieval">
