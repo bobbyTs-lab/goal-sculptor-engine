@@ -121,8 +121,7 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
     }),
   } : null;
 
-  // Da Vinci Vitruvian-inspired proportions (viewBox 0 0 300 480)
-  // Broader shoulders, anatomical proportions, classical form
+  // Vitruvian Man — arms outstretched, inscribed in circle + square
   return (
     <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
       <CardHeader className="pb-2">
@@ -135,81 +134,93 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
       </CardHeader>
       <CardContent className="relative z-10">
         <div className="flex items-start gap-4">
-          <svg viewBox="0 0 300 480" className="w-48 h-80 mx-auto flex-shrink-0">
+          <svg viewBox="0 0 500 500" className="w-56 h-56 md:w-64 md:h-64 mx-auto flex-shrink-0">
+            {/* Vitruvian circle */}
+            <circle cx="250" cy="250" r="220" fill="none" stroke="hsl(130 100% 40% / 0.08)" strokeWidth={1} />
+            {/* Vitruvian square */}
+            <rect x="80" y="48" width="340" height="420" fill="none" stroke="hsl(42 100% 50% / 0.06)" strokeWidth={1} rx="2" />
+
+            {/* === BODY — Arms outstretched, classical proportions === */}
+
             {/* Head */}
-            <ellipse cx="150" cy="38" rx="22" ry="28" fill="hsl(140 12% 18%)" stroke="hsl(130 20% 25%)" strokeWidth={0.8} />
+            <ellipse cx="250" cy="78" rx="22" ry="28" fill="hsl(140 12% 18%)" stroke="hsl(130 20% 25%)" strokeWidth={0.8} />
             {/* Neck */}
-            <rect x="140" y="64" width="20" height="16" rx="4" fill="hsl(140 12% 16%)" />
+            <rect x="242" y="104" width="16" height="14" rx="3" fill="hsl(140 12% 16%)" />
 
-            {/* Traps — wide, connecting neck to shoulders */}
+            {/* Traps */}
             <MusclePath muscle="traps" ratio={muscleRatios.traps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'traps'}
-              d="M120 72 Q135 66 150 70 Q165 66 180 72 L176 86 Q150 80 124 86 Z" />
+              d="M222 114 Q236 108 250 112 Q264 108 278 114 L274 128 Q250 122 226 128 Z" />
 
-            {/* Shoulders / Delts — broad, rounded caps */}
+            {/* Shoulders — broad rounded deltoids */}
             <MusclePath muscle="shoulders" ratio={muscleRatios.shoulders} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'shoulders'}
-              d="M80 82 Q88 70 108 72 L120 78 L118 100 Q100 98 86 94 Z" />
+              d="M196 120 Q204 110 218 114 L226 120 L222 140 Q210 138 198 134 Z" />
             <MusclePath muscle="shoulders" ratio={muscleRatios.shoulders} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'shoulders'}
-              d="M220 82 Q212 70 192 72 L180 78 L182 100 Q200 98 214 94 Z" />
+              d="M304 120 Q296 110 282 114 L274 120 L278 140 Q290 138 302 134 Z" />
 
-            {/* Chest — two pectoral masses */}
+            {/* Chest */}
             <MusclePath muscle="chest" ratio={muscleRatios.chest} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'chest'}
-              d="M118 80 Q130 76 150 78 Q170 76 182 80 L180 112 Q168 118 150 116 Q132 118 120 112 Z" />
+              d="M224 122 Q237 118 250 120 Q263 118 276 122 L274 152 Q263 158 250 156 Q237 158 226 152 Z" />
 
-            {/* Biceps — front of upper arm */}
+            {/* === OUTSTRETCHED ARMS === */}
+            {/* Left upper arm — angled outward */}
+            {/* Biceps left */}
             <MusclePath muscle="biceps" ratio={muscleRatios.biceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'biceps'}
-              d="M76 96 Q82 90 88 96 L84 148 Q76 148 72 142 Z" />
+              d="M194 128 L186 126 L146 140 L140 148 L150 152 L190 140 Z" />
+            {/* Triceps left */}
+            <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
+              d="M190 140 L150 152 L146 160 L152 164 L192 150 L196 142 Z" />
+
+            {/* Biceps right */}
             <MusclePath muscle="biceps" ratio={muscleRatios.biceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'biceps'}
-              d="M224 96 Q218 90 212 96 L216 148 Q224 148 228 142 Z" />
-
-            {/* Triceps — back of upper arm */}
+              d="M306 128 L314 126 L354 140 L360 148 L350 152 L310 140 Z" />
+            {/* Triceps right */}
             <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
-              d="M88 96 Q96 92 104 98 L100 148 Q92 148 84 144 Z" />
-            <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
-              d="M212 96 Q204 92 196 98 L200 148 Q208 148 216 144 Z" />
+              d="M310 140 L350 152 L354 160 L348 164 L308 150 L304 142 Z" />
 
-            {/* Lats — wide V-taper from armpits */}
-            <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
-              d="M108 100 L118 112 L116 148 Q108 142 104 132 Z" />
-            <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
-              d="M192 100 L182 112 L184 148 Q192 142 196 132 Z" />
-
-            {/* Forearms */}
+            {/* Forearms left */}
             <MusclePath muscle="forearms" ratio={muscleRatios.forearms} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'forearms'}
-              d="M72 150 Q80 146 88 150 L84 206 Q76 210 68 204 Z" />
+              d="M140 148 L92 168 L86 176 L92 180 L146 160 Z" />
+            {/* Forearms right */}
             <MusclePath muscle="forearms" ratio={muscleRatios.forearms} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'forearms'}
-              d="M228 150 Q220 146 212 150 L216 206 Q224 210 232 204 Z" />
+              d="M360 148 L408 168 L414 176 L408 180 L354 160 Z" />
 
-            {/* Core / Abs — central torso */}
+            {/* Hands */}
+            <ellipse cx="82" cy="176" rx="10" ry="7" fill="hsl(140 12% 16%)" transform="rotate(-15 82 176)" />
+            <ellipse cx="418" cy="176" rx="10" ry="7" fill="hsl(140 12% 16%)" transform="rotate(15 418 176)" />
+
+            {/* Lats */}
+            <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
+              d="M214 140 L224 152 L222 180 Q214 174 210 164 Z" />
+            <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
+              d="M286 140 L276 152 L278 180 Q286 174 290 164 Z" />
+
+            {/* Core / Abs */}
             <MusclePath muscle="core" ratio={muscleRatios.core} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'core'}
-              d="M124 118 Q137 114 150 116 Q163 114 176 118 L174 190 Q162 196 150 194 Q138 196 126 190 Z" />
+              d="M228 156 Q239 152 250 154 Q261 152 272 156 L270 232 Q260 238 250 236 Q240 238 230 232 Z" />
 
             {/* Glutes */}
             <MusclePath muscle="glutes" ratio={muscleRatios.glutes} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'glutes'}
-              d="M120 190 Q132 186 150 188 Q168 186 180 190 L178 214 Q164 220 150 218 Q136 220 122 214 Z" />
+              d="M224 232 Q236 228 250 230 Q264 228 276 232 L274 256 Q262 262 250 260 Q238 262 226 256 Z" />
 
-            {/* Quads — large thigh muscles */}
+            {/* Quads */}
             <MusclePath muscle="quads" ratio={muscleRatios.quads} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'quads'}
-              d="M118 216 Q128 210 140 214 L136 320 Q124 324 114 318 Z" />
+              d="M222 258 Q232 252 242 256 L238 358 Q228 362 218 356 Z" />
             <MusclePath muscle="quads" ratio={muscleRatios.quads} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'quads'}
-              d="M182 216 Q172 210 160 214 L164 320 Q176 324 186 318 Z" />
+              d="M278 258 Q268 252 258 256 L262 358 Q272 362 282 356 Z" />
 
-            {/* Hamstrings — inner thigh visible from front */}
+            {/* Hamstrings */}
             <MusclePath muscle="hamstrings" ratio={muscleRatios.hamstrings} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'hamstrings'}
-              d="M140 216 L150 214 L160 216 L160 316 Q150 320 140 316 Z" />
+              d="M242 258 L250 256 L258 258 L258 354 Q250 358 242 354 Z" />
 
             {/* Calves */}
             <MusclePath muscle="calves" ratio={muscleRatios.calves} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'calves'}
-              d="M116 324 Q126 318 136 322 L132 408 Q122 412 112 406 Z" />
+              d="M220 362 Q230 356 238 360 L234 434 Q226 438 216 432 Z" />
             <MusclePath muscle="calves" ratio={muscleRatios.calves} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'calves'}
-              d="M184 324 Q174 318 164 322 L168 408 Q178 412 188 406 Z" />
+              d="M280 362 Q270 356 262 360 L266 434 Q274 438 284 432 Z" />
 
             {/* Feet */}
-            <ellipse cx="122" cy="418" rx="14" ry="6" fill="hsl(140 12% 16%)" />
-            <ellipse cx="178" cy="418" rx="14" ry="6" fill="hsl(140 12% 16%)" />
-
-            {/* Hands */}
-            <ellipse cx="76" cy="214" rx="8" ry="10" fill="hsl(140 12% 16%)" />
-            <ellipse cx="224" cy="214" rx="8" ry="10" fill="hsl(140 12% 16%)" />
+            <ellipse cx="226" cy="444" rx="14" ry="6" fill="hsl(140 12% 16%)" />
+            <ellipse cx="274" cy="444" rx="14" ry="6" fill="hsl(140 12% 16%)" />
           </svg>
 
           {/* Info panel */}
