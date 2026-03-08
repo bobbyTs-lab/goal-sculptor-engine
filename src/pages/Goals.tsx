@@ -113,6 +113,9 @@ export default function GoalsPage() {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDeadline, setNewTodoDeadline] = useState('');
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
+  const [aiResponseText, setAiResponseText] = useState('');
+  const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
+  const [promptTab, setPromptTab] = useState('prompt');
 
   const toggle = (set: Set<string>, id: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
