@@ -99,15 +99,15 @@ export default function PeoplePage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
       <FlickerIn>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text ember-particles relative">People Board</h1>
-            <p className="text-muted-foreground mt-1 font-medieval">Track relationships · Set plans · Stay connected</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">People</h1>
+            <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Track relationships · Stay connected</p>
           </div>
-          <Button onClick={openNew} className="gradient-alien text-primary-foreground font-gothic gap-2">
-            <Plus className="h-4 w-4" /> Add Person
+          <Button onClick={openNew} size="sm" className="gradient-alien text-primary-foreground font-gothic gap-1.5 flex-shrink-0">
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add</span>
           </Button>
         </div>
       </FlickerIn>
