@@ -353,10 +353,10 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full space-y-2 p-2">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medieval text-muted-foreground">Click timeline to add · Drag to move · Drag bottom to resize</span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-[10px] md:text-xs font-medieval text-muted-foreground">Tap to add · Drag to move</span>
         <Button variant="ghost" size="sm" className="ml-auto text-xs font-medieval gap-1" onClick={() => setShowCategoryManager(!showCategoryManager)}>
           <Palette className="h-3.5 w-3.5" />
           Categories
@@ -404,8 +404,8 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
         )}
       </AnimatePresence>
 
-      {/* Category legend */}
-      <div className="flex flex-wrap gap-1">
+      {/* Category legend — hidden on mobile */}
+      <div className="hidden md:flex flex-wrap gap-1 flex-shrink-0">
         {categories.map(cat => (
           <Badge key={cat.id} variant="outline" className="text-[10px] font-medieval cursor-default" style={{ backgroundColor: `hsl(${cat.color} / 0.15)`, borderColor: `hsl(${cat.color} / 0.4)`, color: `hsl(${cat.color})` }}>
             {cat.name}
@@ -416,8 +416,8 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
       {/* TIMELINE */}
       <div
         ref={containerRef}
-        className="relative border border-border/30 rounded-lg overflow-y-auto bg-card/30 select-none"
-        style={{ height: 500, cursor: dragging ? 'grabbing' : 'default' }}
+        className="relative rounded-lg overflow-y-auto bg-card/30 select-none flex-1 min-h-0"
+        style={{ cursor: dragging ? 'grabbing' : 'default' }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onClick={handleTimelineClick}
