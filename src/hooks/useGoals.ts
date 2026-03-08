@@ -85,7 +85,7 @@ export function useGoals() {
             ...p,
             tasks: p.tasks.map(t => {
               if (t.id !== taskId) return t;
-              const todo: ToDo = { id: generateId(), title, done: false, order: t.todos.length };
+              const todo: ToDo = { id: generateId(), title, done: false, order: t.todos.length, deadline };
               return { ...t, todos: [...t.todos, todo] };
             }),
           };
