@@ -322,7 +322,7 @@ export default function WorkoutsPage() {
         {/* CONFIG TAB */}
         <TabsContent value="config" className="space-y-4">
           {configs.map(config => (
-            <Card key={config.exercise} className="border-rough relative overflow-hidden scanlines bg-card/80">
+            <Card key={config.exercise} className="border-runic relative overflow-hidden scanlines bg-card/80 texture-parchment">
               <CardContent className="pt-6 relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medieval font-bold text-lg">{EXERCISE_LABELS[config.exercise]}</h3>

@@ -66,7 +66,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === '/'}
-                        className="relative font-medieval text-base tracking-wide transition-all duration-300 hover:bg-muted/50 group"
+                        className="relative font-medieval text-base tracking-wide transition-all duration-300 hover:bg-muted/50 group glitch-hover"
                         activeClassName="text-primary font-bold"
                       >
                         {/* Active ember glow bar */}
