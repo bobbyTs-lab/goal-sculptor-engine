@@ -1,4 +1,4 @@
-import { Target, Dumbbell, Download } from "lucide-react";
+import { Target, Dumbbell, Download, Skull } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { exportAllData } from "@/lib/storage";
@@ -25,7 +25,6 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const isActive = (path: string) => location.pathname.startsWith(path);
 
   const handleExport = () => {
     const data = exportAllData();
@@ -39,12 +38,13 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border">
+    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="font-medieval text-lg gradient-alien-text">
+          <SidebarGroupLabel className="font-gothic text-2xl gradient-alien-text py-4">
             {!collapsed && "GoalForge"}
           </SidebarGroupLabel>
+          <div className="divider-alien mx-2 mb-2" />
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -53,8 +53,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={false}
-                      className="hover:bg-muted/50 transition-colors"
-                      activeClassName="bg-primary/15 text-primary font-medium glow-green"
+                      className="hover:bg-muted/50 transition-all font-medieval text-base tracking-wide"
+                      activeClassName="bg-primary/20 text-primary font-bold glow-green border-l-2 border-primary"
                     >
                       <item.icon className="mr-2 h-5 w-5" />
                       {!collapsed && <span>{item.title}</span>}
@@ -67,11 +67,12 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
+        <div className="divider-alien mx-2 mb-2" />
         <Button
           variant="ghost"
           size="sm"
           onClick={handleExport}
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
+          className="w-full justify-start text-muted-foreground hover:text-secondary hover:glow-gold-text transition-all font-medieval"
         >
           <Download className="h-4 w-4 mr-2" />
           {!collapsed && "Export Data"}

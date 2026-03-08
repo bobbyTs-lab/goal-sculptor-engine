@@ -34,10 +34,10 @@ function RestTimer() {
   };
 
   return (
-    <Card className="border-border">
+    <Card className="border-rough bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Timer className="h-4 w-4 text-primary" /> Rest Timer
+        <CardTitle className="text-sm flex items-center gap-2 font-medieval">
+          <Timer className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" /> Rest Timer
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -46,13 +46,13 @@ function RestTimer() {
             type="number"
             value={seconds}
             onChange={e => setSeconds(Number(e.target.value))}
-            className="w-20"
+            className="w-20 border-rough"
             min={10}
             max={300}
             disabled={running}
           />
-          <span className="text-sm text-muted-foreground">sec</span>
-          <Button size="sm" onClick={start} disabled={running} className="gradient-alien text-primary-foreground">
+          <span className="text-sm text-muted-foreground font-medieval">sec</span>
+          <Button size="sm" onClick={start} disabled={running} className="gradient-alien text-primary-foreground font-bold font-medieval">
             {running ? `${timeLeft}s` : 'Start'}
           </Button>
         </div>
@@ -66,7 +66,6 @@ export default function WorkoutsPage() {
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
 
-  // New session state
   const [splitDay, setSplitDay] = useState<SplitDay>('push');
   const [sessionExercises, setSessionExercises] = useState<{
     exercise: CompoundExercise;
@@ -120,25 +119,27 @@ export default function WorkoutsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="font-medieval text-3xl gradient-alien-text">Workout Engine</h1>
-        <p className="text-muted-foreground mt-1">Progressive overload, compound-first</p>
+        <h1 className="font-gothic text-4xl gradient-alien-text glow-green-text">Workout Engine</h1>
+        <p className="text-muted-foreground mt-1 font-medieval">Progressive overload · Compound-first</p>
       </div>
 
+      <div className="divider-alien" />
+
       <Tabs defaultValue="session" className="space-y-4">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="session">Log Session</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="prs">PRs</TabsTrigger>
-          <TabsTrigger value="config">Config</TabsTrigger>
+        <TabsList className="bg-muted/30 border-rough">
+          <TabsTrigger value="session" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Log Session</TabsTrigger>
+          <TabsTrigger value="progress" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Progress</TabsTrigger>
+          <TabsTrigger value="prs" className="font-medieval data-[state=active]:text-secondary data-[state=active]:glow-gold-text">PRs</TabsTrigger>
+          <TabsTrigger value="config" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Config</TabsTrigger>
         </TabsList>
 
         {/* LOG SESSION TAB */}
         <TabsContent value="session" className="space-y-4">
           <div className="flex gap-4 flex-wrap items-end">
             <div>
-              <label className="text-sm text-muted-foreground">Split Day</label>
+              <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Split Day</label>
               <Select value={splitDay} onValueChange={(v) => setSplitDay(v as SplitDay)}>
-                <SelectTrigger className="w-32 mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-32 mt-1 border-rough"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['push', 'pull', 'legs', 'upper', 'lower'].map(s => (
                     <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
@@ -147,9 +148,9 @@ export default function WorkoutsPage() {
               </Select>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Add Exercise</label>
+              <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Add Exercise</label>
               <Select onValueChange={(v) => addExerciseToSession(v as CompoundExercise)}>
-                <SelectTrigger className="w-48 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="w-48 mt-1 border-rough"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(EXERCISE_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -166,11 +167,11 @@ export default function WorkoutsPage() {
             const suggestion = config ? getProgressionSuggestion(config, recentHistory) : null;
 
             return (
-              <Card key={exIdx} className="border-border">
-                <CardHeader className="pb-2">
+              <Card key={exIdx} className="border-rough relative overflow-hidden scanlines bg-card/80">
+                <CardHeader className="pb-2 relative z-10">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Dumbbell className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-base flex items-center gap-2 font-medieval">
+                      <Dumbbell className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" />
                       {EXERCISE_LABELS[ex.exercise]}
                     </CardTitle>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeExercise(exIdx)}>
@@ -178,10 +179,10 @@ export default function WorkoutsPage() {
                     </Button>
                   </div>
                   {suggestion && (
-                    <div className={`text-xs p-2 rounded mt-2 ${
-                      suggestion.type === 'increase_weight' ? 'bg-secondary/10 text-secondary' :
-                      suggestion.type === 'deload' ? 'bg-destructive/10 text-destructive' :
-                      'bg-primary/10 text-primary'
+                    <div className={`text-xs p-2 rounded mt-2 border font-medieval ${
+                      suggestion.type === 'increase_weight' ? 'bg-secondary/10 text-secondary border-secondary/30' :
+                      suggestion.type === 'deload' ? 'bg-destructive/10 text-destructive border-destructive/30' :
+                      'bg-primary/10 text-primary border-primary/30'
                     }`}>
                       {suggestion.type === 'increase_weight' && <ArrowUp className="h-3 w-3 inline mr-1" />}
                       {suggestion.type === 'deload' && <ArrowDown className="h-3 w-3 inline mr-1" />}
@@ -190,17 +191,17 @@ export default function WorkoutsPage() {
                     </div>
                   )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative z-10">
                   <div className="space-y-2">
-                    <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground font-medium">
-                      <span>Set</span><span>Weight (lbs)</span><span>Reps</span><span>RPE (1-5)</span>
+                    <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground font-medieval uppercase tracking-wider">
+                      <span>Set</span><span>Weight</span><span>Reps</span><span>RPE</span>
                     </div>
                     {ex.sets.map((set, setIdx) => (
                       <div key={setIdx} className="grid grid-cols-4 gap-2">
-                        <span className="text-sm flex items-center">{setIdx + 1}</span>
-                        <Input type="number" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', Number(e.target.value))} className="h-8" />
-                        <Input type="number" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))} className="h-8" />
-                        <Input type="number" value={set.rpe} onChange={e => updateSet(exIdx, setIdx, 'rpe', Math.min(5, Math.max(1, Number(e.target.value))))} className="h-8" min={1} max={5} />
+                        <span className="text-sm flex items-center font-bold text-primary">{setIdx + 1}</span>
+                        <Input type="number" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', Number(e.target.value))} className="h-8 border-rough" />
+                        <Input type="number" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))} className="h-8 border-rough" />
+                        <Input type="number" value={set.rpe} onChange={e => updateSet(exIdx, setIdx, 'rpe', Math.min(5, Math.max(1, Number(e.target.value))))} className="h-8 border-rough" min={1} max={5} />
                       </div>
                     ))}
                   </div>
@@ -210,16 +211,16 @@ export default function WorkoutsPage() {
           })}
 
           {sessionExercises.length > 0 && (
-            <Button onClick={logSession} className="w-full gradient-alien text-primary-foreground font-semibold text-lg py-6 glow-green">
-              Log Session 🔥
+            <Button onClick={logSession} className="w-full gradient-alien text-primary-foreground font-bold text-lg py-6 glow-green font-gothic tracking-wide">
+              ⚔ Log Session ⚔
             </Button>
           )}
 
           {sessionExercises.length === 0 && (
-            <Card className="border-dashed border-2 border-primary/30">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Dumbbell className="h-12 w-12 text-primary/50 mb-4" />
-                <p className="text-muted-foreground">Select exercises above to start your session</p>
+            <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Dumbbell className="h-16 w-16 text-primary/40 mb-4 drop-shadow-[0_0_15px_hsl(130,100%,40%,0.4)]" />
+                <p className="text-muted-foreground font-medieval text-lg">Select exercises above to begin</p>
               </CardContent>
             </Card>
           )}
@@ -229,9 +230,9 @@ export default function WorkoutsPage() {
         <TabsContent value="progress" className="space-y-4">
           <div className="flex gap-4 items-end">
             <div>
-              <label className="text-sm text-muted-foreground">Exercise</label>
+              <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Exercise</label>
               <Select value={selectedExercise} onValueChange={(v) => setSelectedExercise(v as CompoundExercise)}>
-                <SelectTrigger className="w-48 mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-48 mt-1 border-rough"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(EXERCISE_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -241,48 +242,48 @@ export default function WorkoutsPage() {
             </div>
           </div>
 
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" /> Weight Progression
+          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+            <CardHeader className="relative z-10">
+              <CardTitle className="text-sm flex items-center gap-2 font-medieval">
+                <TrendingUp className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" /> Weight Progression
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(150 10% 18%)" />
-                    <XAxis dataKey="date" stroke="hsl(80 10% 55%)" fontSize={12} />
-                    <YAxis stroke="hsl(80 10% 55%)" fontSize={12} />
-                    <Tooltip contentStyle={{ background: 'hsl(150 12% 9%)', border: '1px solid hsl(150 10% 18%)', borderRadius: '8px' }} />
-                    <Line type="monotone" dataKey="weight" stroke="hsl(145 70% 42%)" strokeWidth={2} dot={{ fill: 'hsl(145 70% 42%)' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(130 20% 15%)" />
+                    <XAxis dataKey="date" stroke="hsl(60 10% 45%)" fontSize={11} />
+                    <YAxis stroke="hsl(60 10% 45%)" fontSize={11} />
+                    <Tooltip contentStyle={{ background: 'hsl(140 18% 7%)', border: '2px solid hsl(130 100% 40% / 0.3)', borderRadius: '4px', fontFamily: 'IBM Plex Mono' }} />
+                    <Line type="monotone" dataKey="weight" stroke="hsl(130 100% 40%)" strokeWidth={3} dot={{ fill: 'hsl(130 100% 40%)', r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-muted-foreground text-center py-8">No data yet. Log your first session!</p>
+                <p className="text-muted-foreground text-center py-8 font-medieval">No data yet. Log your first session!</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-secondary" /> Weekly Volume Load
+          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
+            <CardHeader className="relative z-10">
+              <CardTitle className="text-sm flex items-center gap-2 font-medieval">
+                <TrendingUp className="h-4 w-4 text-secondary drop-shadow-[0_0_6px_hsl(42,100%,50%,0.5)]" /> Weekly Volume
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               {weeklyVolume.length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={weeklyVolume}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(150 10% 18%)" />
-                    <XAxis dataKey="week" stroke="hsl(80 10% 55%)" fontSize={12} />
-                    <YAxis stroke="hsl(80 10% 55%)" fontSize={12} />
-                    <Tooltip contentStyle={{ background: 'hsl(150 12% 9%)', border: '1px solid hsl(150 10% 18%)', borderRadius: '8px' }} />
-                    <Bar dataKey="volume" fill="hsl(45 80% 50%)" radius={[4, 4, 0, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(130 20% 15%)" />
+                    <XAxis dataKey="week" stroke="hsl(60 10% 45%)" fontSize={11} />
+                    <YAxis stroke="hsl(60 10% 45%)" fontSize={11} />
+                    <Tooltip contentStyle={{ background: 'hsl(140 18% 7%)', border: '2px solid hsl(42 100% 50% / 0.3)', borderRadius: '4px', fontFamily: 'IBM Plex Mono' }} />
+                    <Bar dataKey="volume" fill="hsl(42 100% 50%)" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-muted-foreground text-center py-8">No data yet</p>
+                <p className="text-muted-foreground text-center py-8 font-medieval">No data yet</p>
               )}
             </CardContent>
           </Card>
@@ -292,23 +293,23 @@ export default function WorkoutsPage() {
         <TabsContent value="prs" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {prs.length > 0 ? prs.map(pr => (
-              <Card key={pr.exercise} className="border-border glow-gold">
-                <CardContent className="pt-6">
+              <Card key={pr.exercise} className="border-rough glow-gold relative overflow-hidden scanlines bg-card/80">
+                <CardContent className="pt-6 relative z-10">
                   <div className="flex items-center gap-3">
-                    <Trophy className="h-6 w-6 text-secondary" />
+                    <Trophy className="h-8 w-8 text-secondary drop-shadow-[0_0_10px_hsl(42,100%,50%,0.6)]" />
                     <div>
-                      <p className="font-semibold">{EXERCISE_LABELS[pr.exercise]}</p>
-                      <p className="text-2xl font-bold text-secondary">{pr.weight} lbs × {pr.reps}</p>
-                      <p className="text-xs text-muted-foreground">Volume: {pr.volumeLoad} lbs · {new Date(pr.date).toLocaleDateString()}</p>
+                      <p className="font-medieval font-bold text-lg">{EXERCISE_LABELS[pr.exercise]}</p>
+                      <p className="text-3xl font-bold text-secondary glow-gold-text font-gothic">{pr.weight} × {pr.reps}</p>
+                      <p className="text-xs text-muted-foreground font-medieval">Vol: {pr.volumeLoad} lbs · {new Date(pr.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )) : (
-              <Card className="border-dashed border-2 border-secondary/30 col-span-2">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Trophy className="h-12 w-12 text-secondary/50 mb-4" />
-                  <p className="text-muted-foreground">No PRs yet. Start lifting!</p>
+              <Card className="border-dashed border-2 border-secondary/30 col-span-2 bg-card/50">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <Trophy className="h-16 w-16 text-secondary/40 mb-4 drop-shadow-[0_0_15px_hsl(42,100%,50%,0.4)]" />
+                  <p className="text-muted-foreground font-medieval text-lg">No PRs yet. Start lifting!</p>
                 </CardContent>
               </Card>
             )}
@@ -318,28 +319,28 @@ export default function WorkoutsPage() {
         {/* CONFIG TAB */}
         <TabsContent value="config" className="space-y-4">
           {configs.map(config => (
-            <Card key={config.exercise} className="border-border">
-              <CardContent className="pt-6">
+            <Card key={config.exercise} className="border-rough relative overflow-hidden scanlines bg-card/80">
+              <CardContent className="pt-6 relative z-10">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">{EXERCISE_LABELS[config.exercise]}</h3>
-                  <Badge variant="outline">{config.targetSets} × {config.repRangeMin}-{config.repRangeMax}</Badge>
+                  <h3 className="font-medieval font-bold text-lg">{EXERCISE_LABELS[config.exercise]}</h3>
+                  <Badge variant="outline" className="border-primary/30 font-medieval">{config.targetSets} × {config.repRangeMin}-{config.repRangeMax}</Badge>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">Current Weight</label>
-                    <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1" />
+                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Weight</label>
+                    <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1 border-rough" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">Increment</label>
-                    <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1" step={2.5} />
+                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Increment</label>
+                    <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1 border-rough" step={2.5} />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">Rep Min</label>
-                    <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1" />
+                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Rep Min</label>
+                    <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1 border-rough" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">Rep Max</label>
-                    <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1" />
+                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Rep Max</label>
+                    <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1 border-rough" />
                   </div>
                 </div>
               </CardContent>
