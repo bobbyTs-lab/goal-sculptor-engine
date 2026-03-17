@@ -14,24 +14,22 @@ export function ProgressRing({ value, size = 64, strokeWidth = 5, className = ''
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (Math.min(value, 100) / 100) * circumference;
 
-  // Interpolate green (130°) → gold (42°) based on value
-  const hue = 130 - (value / 100) * 88;
-  const color = `hsl(${hue} 100% 45%)`;
-  const glowColor = `hsl(${hue} 100% 45% / 0.6)`;
+  // Navy → Coral based on value
+  const hue = 220 - (value / 100) * 208;
+  const sat = 60 + (value / 100) * 20;
+  const color = `hsl(${hue} ${sat}% 50%)`;
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        {/* Background track */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="hsl(140 12% 12%)"
+          stroke="hsl(var(--muted))"
           strokeWidth={strokeWidth}
         />
-        {/* Progress arc */}
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -44,12 +42,11 @@ export function ProgressRing({ value, size = 64, strokeWidth = 5, className = ''
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          style={{ filter: `drop-shadow(0 0 6px ${glowColor})` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {showPercent && (
-          <span className="text-xs font-bold font-medieval" style={{ color, textShadow: `0 0 8px ${glowColor}` }}>
+          <span className="text-xs font-bold" style={{ color }}>
             {Math.round(value)}%
           </span>
         )}

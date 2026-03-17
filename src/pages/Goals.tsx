@@ -13,7 +13,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { EmberCard, EmberText, FlickerIn } from '@/components/EmberAnimations';
 import { ProgressRing } from '@/components/ProgressRing';
 
 // --- Parser types ---
@@ -56,8 +55,6 @@ function parseAIResponse(text: string): ParseResult {
       currentTask.todos.push({ title: todoMatch[1].trim(), deadline: todoMatch[2] });
       continue;
     }
-
-    // Skip non-matching lines silently (comments, blank formatting etc.)
   }
 
   if (phases.length === 0) {
@@ -68,9 +65,9 @@ function parseAIResponse(text: string): ParseResult {
 }
 
 const statusColors: Record<string, string> = {
-  not_started: 'bg-muted text-muted-foreground border border-muted-foreground/20',
-  in_progress: 'bg-primary/20 text-primary border border-primary/30 glow-green',
-  complete: 'bg-secondary/20 text-secondary border border-secondary/30 glow-gold',
+  not_started: 'bg-muted text-muted-foreground',
+  in_progress: 'bg-primary/10 text-primary border border-primary/20',
+  complete: 'bg-teal/10 text-teal border border-teal/20',
 };
 
 const statusLabels: Record<string, string> = {
@@ -83,9 +80,8 @@ function DeadlineBadge({ deadline }: { deadline?: string }) {
   const days = getDaysRemaining(deadline);
   if (days === null) return null;
   const color = getUrgencyColor(days);
-  const urgency = getUrgencyClass(days);
   return (
-    <span className={`text-xs font-medieval flex items-center gap-1 ${color} ${urgency}`}>
+    <span className={`text-xs font-medium flex items-center gap-1 ${color}`}>
       <Clock className="h-3 w-3" />
       {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`}
     </span>
@@ -129,7 +125,7 @@ export default function GoalsPage() {
     addGoal(newGoal.title, newGoal.description, newGoal.endGoal, newGoal.deadline || undefined);
     setNewGoal({ title: '', description: '', endGoal: '', deadline: '' });
     setShowNewGoal(false);
-    toast.success('Goal forged! ⚔');
+    toast.success('Goal created!');
   };
 
   const handleAddPhase = () => {
@@ -271,22 +267,16 @@ RULES:
     }
   };
 
-  // Bulk import: directly build and persist all data at once
   const handleBulkImport = () => {
     if (!promptGoal || !parsedResult) return;
-
-    // Use the updateGoal approach - build the full phases array
     const goal = goals.find(g => g.id === promptGoal.id);
     if (!goal) return;
 
     let totalTasks = 0, totalTodos = 0;
-
-    // For each parsed phase, either merge into existing or create new
     const updatedPhases = [...goal.phases];
 
     for (const pp of parsedResult.phases) {
       const existingIdx = updatedPhases.findIndex(p => p.title.toLowerCase() === pp.title.toLowerCase());
-
       const tasks = pp.tasks.map((pt, ti) => ({
         id: generateId(),
         title: pt.title,
@@ -307,7 +297,6 @@ RULES:
       totalTodos += tasks.reduce((sum, t) => sum + t.todos.length, 0);
 
       if (existingIdx >= 0) {
-        // Merge tasks into existing phase
         const existing = updatedPhases[existingIdx];
         updatedPhases[existingIdx] = {
           ...existing,
@@ -315,7 +304,6 @@ RULES:
           tasks: [...existing.tasks, ...tasks.map((t, i) => ({ ...t, order: existing.tasks.length + i }))],
         };
       } else {
-        // Create new phase
         updatedPhases.push({
           id: generateId(),
           title: pp.title,
@@ -327,88 +315,82 @@ RULES:
       }
     }
 
-    // Use updateGoal to persist everything at once
     updateGoal(promptGoal.id, { phases: updatedPhases });
-
-    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos! ⚔`);
+    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos!`);
     setParsedResult(null);
     setAiResponseText('');
     setPromptGoal(null);
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 relative">
+      {/* Decorative circle */}
+      <div className="section-circle circle-violet w-72 h-72 -top-16 -left-16" />
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <FlickerIn>
-          <div>
-            <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Goals</h1>
-            <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">
-              {goals.length} goal{goals.length !== 1 ? 's' : ''} active
-            </p>
-          </div>
-        </FlickerIn>
-        <EmberCard delay={0.2}>
-          <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
-            <DialogTrigger asChild>
-              <Button className="gradient-alien text-primary-foreground font-bold glow-green font-medieval tracking-wide crt-hover">
-                <Plus className="h-4 w-4 mr-2" /> New Goal
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="bg-card border-rough">
+      <div className="flex items-center justify-between relative z-10">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Goals</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">
+            {goals.length} goal{goals.length !== 1 ? 's' : ''} active
+          </p>
+        </div>
+        <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
+          <DialogTrigger asChild>
+            <Button className="font-semibold">
+              <Plus className="h-4 w-4 mr-2" /> New Goal
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="font-gothic gradient-alien-text text-2xl">Forge New Goal</DialogTitle>
+              <DialogTitle className="text-xl font-bold">Create New Goal</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div>
-                <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Goal Title</label>
-                <Input value={newGoal.title} onChange={e => setNewGoal({ ...newGoal, title: e.target.value })} placeholder="e.g., Learn Spanish" className="mt-1 border-rough" />
+                <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Goal Title</label>
+                <Input value={newGoal.title} onChange={e => setNewGoal({ ...newGoal, title: e.target.value })} placeholder="e.g., Learn Spanish" className="mt-1" />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Description</label>
-                <Textarea value={newGoal.description} onChange={e => setNewGoal({ ...newGoal, description: e.target.value })} placeholder="What does this goal involve?" className="mt-1 border-rough" />
+                <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Description</label>
+                <Textarea value={newGoal.description} onChange={e => setNewGoal({ ...newGoal, description: e.target.value })} placeholder="What does this goal involve?" className="mt-1" />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">End Goal Vision</label>
-                <Textarea value={newGoal.endGoal} onChange={e => setNewGoal({ ...newGoal, endGoal: e.target.value })} placeholder="What does success look like?" className="mt-1 border-rough" />
+                <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">End Goal Vision</label>
+                <Textarea value={newGoal.endGoal} onChange={e => setNewGoal({ ...newGoal, endGoal: e.target.value })} placeholder="What does success look like?" className="mt-1" />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Deadline</label>
-                <Input type="date" value={newGoal.deadline} onChange={e => setNewGoal({ ...newGoal, deadline: e.target.value })} className="mt-1 border-rough" />
+                <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Deadline</label>
+                <Input type="date" value={newGoal.deadline} onChange={e => setNewGoal({ ...newGoal, deadline: e.target.value })} className="mt-1" />
               </div>
-              <Button onClick={handleCreateGoal} className="w-full gradient-alien text-primary-foreground font-bold glow-green font-medieval text-base">⚔ Forge Goal</Button>
+              <Button onClick={handleCreateGoal} className="w-full font-semibold">Create Goal</Button>
             </div>
           </DialogContent>
         </Dialog>
-        </EmberCard>
       </div>
-
-      <div className="divider-alien" />
 
       {/* Goals List */}
       {goals.length === 0 ? (
-        <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+        <Card className="border-dashed border-2 border-primary/20">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Target className="h-16 w-16 text-primary/40 mb-4 drop-shadow-[0_0_15px_hsl(130,100%,40%,0.4)]" />
-            <p className="text-muted-foreground text-lg font-medieval">No goals yet. Forge your first goal to begin!</p>
+            <Target className="h-16 w-16 text-primary/30 mb-4" />
+            <p className="text-muted-foreground text-lg">No goals yet. Create your first goal to begin!</p>
           </CardContent>
         </Card>
       ) : (
-        goals.map((goal, goalIdx) => {
+        goals.map((goal) => {
           const progress = calculateGoalProgress(goal);
           const isExpanded = expandedGoals.has(goal.id);
           const goalDays = getDaysRemaining(goal.deadline);
           return (
-            <EmberCard key={goal.id} delay={goalIdx * 0.12}>
-            <Card className={`border-rough relative overflow-hidden scanlines bg-card/80 crt-hover ${getUrgencyClass(goalDays)}`}>
+            <Card key={goal.id} className={`shadow-sm ${getUrgencyClass(goalDays)}`}>
               <Collapsible open={isExpanded} onOpenChange={() => toggle(expandedGoals, goal.id, setExpandedGoals)}>
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors relative z-10">
+                  <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                         <div>
-                          <CardTitle className="text-lg font-medieval">{goal.title}</CardTitle>
+                          <CardTitle className="text-lg">{goal.title}</CardTitle>
                           <div className="flex items-center gap-3 mt-1">
                             <p className="text-sm text-muted-foreground">{goal.description}</p>
                             <DeadlineBadge deadline={goal.deadline} />
@@ -420,23 +402,23 @@ RULES:
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <CardContent className="pt-0 space-y-4 relative z-10">
-                    <div className="divider-alien" />
+                  <CardContent className="pt-0 space-y-4">
+                    <div className="h-px bg-border" />
                     {/* End Goal */}
-                    <div className="p-3 rounded bg-muted/30 border-rough">
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medieval">End Goal Vision</p>
+                    <div className="p-3 rounded-lg bg-accent/50">
+                      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medium">End Goal Vision</p>
                       <p className="text-sm">{goal.endGoal}</p>
                     </div>
 
                     {/* Action buttons */}
                     <div className="flex gap-2 flex-wrap">
-                      <Button size="sm" variant="outline" className="border-rough font-medieval" onClick={() => setAddPhaseGoalId(goal.id)}>
+                      <Button size="sm" variant="outline" onClick={() => setAddPhaseGoalId(goal.id)}>
                         <Plus className="h-3 w-3 mr-1" /> Add Phase
                       </Button>
-                      <Button size="sm" variant="outline" className="border-rough font-medieval" onClick={() => { setPromptGoal(goal); }}>
+                      <Button size="sm" variant="outline" onClick={() => { setPromptGoal(goal); }}>
                         <Sparkles className="h-3 w-3 mr-1" /> AI Prompt
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive ml-auto font-medieval" onClick={() => deleteGoal(goal.id)}>
+                      <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => deleteGoal(goal.id)}>
                         <Trash2 className="h-3 w-3 mr-1" /> Delete
                       </Button>
                     </div>
@@ -447,17 +429,17 @@ RULES:
                       const phaseExpanded = expandedPhases.has(phase.id);
                       return (
                         <Collapsible key={phase.id} open={phaseExpanded} onOpenChange={() => toggle(expandedPhases, phase.id, setExpandedPhases)}>
-                          <div className="ml-4 border-l-2 border-primary/40 pl-4">
+                          <div className="ml-4 border-l-2 border-primary/20 pl-4">
                             <CollapsibleTrigger asChild>
-                              <div className="flex items-center justify-between cursor-pointer hover:bg-muted/20 p-2 rounded transition-colors">
+                              <div className="flex items-center justify-between cursor-pointer hover:bg-accent/30 p-2 rounded-lg transition-colors">
                                 <div className="flex items-center gap-2">
-                                  {phaseExpanded ? <ChevronDown className="h-4 w-4 text-secondary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                                  <span className="font-medieval font-bold">{phase.title}</span>
+                                  {phaseExpanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                  <span className="font-semibold">{phase.title}</span>
                                   <ProgressRing value={phaseProgress} size={28} strokeWidth={2.5} />
                                   <DeadlineBadge deadline={phase.deadline} />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Button size="sm" variant="ghost" className="h-7 text-xs font-medieval" onClick={(e) => { e.stopPropagation(); setAddTaskTarget({ goalId: goal.id, phaseId: phase.id }); }}>
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setAddTaskTarget({ goalId: goal.id, phaseId: phase.id }); }}>
                                     <Plus className="h-3 w-3 mr-1" /> Task
                                   </Button>
                                   <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={(e) => { e.stopPropagation(); deletePhase(goal.id, phase.id); }}>
@@ -473,12 +455,12 @@ RULES:
                                 const taskExpanded = expandedTasks.has(task.id);
                                 return (
                                   <Collapsible key={task.id} open={taskExpanded} onOpenChange={() => toggle(expandedTasks, task.id, setExpandedTasks)}>
-                                    <div className="ml-4 border-l border-secondary/30 pl-3 mt-2">
+                                    <div className="ml-4 border-l border-border pl-3 mt-2">
                                       <CollapsibleTrigger asChild>
-                                        <div className="flex items-center justify-between cursor-pointer hover:bg-muted/10 p-1.5 rounded transition-colors">
+                                        <div className="flex items-center justify-between cursor-pointer hover:bg-accent/20 p-1.5 rounded-lg transition-colors">
                                           <div className="flex items-center gap-2">
                                             {taskExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                            <span className="text-sm font-medieval">{task.title}</span>
+                                            <span className="text-sm">{task.title}</span>
                                             <Badge className={`text-xs ${statusColors[status]}`}>{statusLabels[status]}</Badge>
                                             <span className="text-xs text-muted-foreground">{taskProgress}%</span>
                                             <DeadlineBadge deadline={task.deadline} />
@@ -509,7 +491,7 @@ RULES:
                                             </div>
                                           ))}
                                           {task.todos.length === 0 && (
-                                            <p className="text-xs text-muted-foreground italic font-medieval">No to-dos yet</p>
+                                            <p className="text-xs text-muted-foreground italic">No to-dos yet</p>
                                           )}
                                         </div>
                                       </CollapsibleContent>
@@ -518,7 +500,7 @@ RULES:
                                 );
                               })}
                               {phase.tasks.length === 0 && (
-                                <p className="text-xs text-muted-foreground italic ml-4 mt-2 font-medieval">No tasks yet</p>
+                                <p className="text-xs text-muted-foreground italic ml-4 mt-2">No tasks yet</p>
                               )}
                             </CollapsibleContent>
                           </div>
@@ -529,109 +511,107 @@ RULES:
                 </CollapsibleContent>
               </Collapsible>
             </Card>
-            </EmberCard>
           );
         })
       )}
 
       {/* Add Phase Dialog */}
       <Dialog open={!!addPhaseGoalId} onOpenChange={() => setAddPhaseGoalId(null)}>
-        <DialogContent className="bg-card border-rough">
-          <DialogHeader><DialogTitle className="font-gothic gradient-alien-text text-xl">Add Phase</DialogTitle></DialogHeader>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="text-xl font-bold">Add Phase</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
-            <Input placeholder="Phase title" value={newPhase.title} onChange={e => setNewPhase({ ...newPhase, title: e.target.value })} className="border-rough" />
-            <Textarea placeholder="Description" value={newPhase.description} onChange={e => setNewPhase({ ...newPhase, description: e.target.value })} className="border-rough" />
+            <Input placeholder="Phase title" value={newPhase.title} onChange={e => setNewPhase({ ...newPhase, title: e.target.value })} />
+            <Textarea placeholder="Description" value={newPhase.description} onChange={e => setNewPhase({ ...newPhase, description: e.target.value })} />
             <div>
-              <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Deadline</label>
-              <Input type="date" value={newPhase.deadline} onChange={e => setNewPhase({ ...newPhase, deadline: e.target.value })} className="mt-1 border-rough" />
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Deadline</label>
+              <Input type="date" value={newPhase.deadline} onChange={e => setNewPhase({ ...newPhase, deadline: e.target.value })} className="mt-1" />
             </div>
-            <Button onClick={handleAddPhase} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">Add Phase</Button>
+            <Button onClick={handleAddPhase} className="w-full font-semibold">Add Phase</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Add Task Dialog */}
       <Dialog open={!!addTaskTarget} onOpenChange={() => setAddTaskTarget(null)}>
-        <DialogContent className="bg-card border-rough">
-          <DialogHeader><DialogTitle className="font-gothic gradient-alien-text text-xl">Add Task</DialogTitle></DialogHeader>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="text-xl font-bold">Add Task</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
-            <Input placeholder="Task title" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} className="border-rough" />
-            <Textarea placeholder="Description" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} className="border-rough" />
+            <Input placeholder="Task title" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} />
+            <Textarea placeholder="Description" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} />
             <div>
-              <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Deadline</label>
-              <Input type="date" value={newTask.deadline} onChange={e => setNewTask({ ...newTask, deadline: e.target.value })} className="mt-1 border-rough" />
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Deadline</label>
+              <Input type="date" value={newTask.deadline} onChange={e => setNewTask({ ...newTask, deadline: e.target.value })} className="mt-1" />
             </div>
-            <Button onClick={handleAddTask} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">Add Task</Button>
+            <Button onClick={handleAddTask} className="w-full font-semibold">Add Task</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Add Todo Dialog */}
       <Dialog open={!!addTodoTarget} onOpenChange={() => setAddTodoTarget(null)}>
-        <DialogContent className="bg-card border-rough">
-          <DialogHeader><DialogTitle className="font-gothic gradient-alien-text text-xl">Add To-Do</DialogTitle></DialogHeader>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="text-xl font-bold">Add To-Do</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
-            <Input placeholder="To-do item" value={newTodoTitle} onChange={e => setNewTodoTitle(e.target.value)} className="border-rough" />
+            <Input placeholder="To-do item" value={newTodoTitle} onChange={e => setNewTodoTitle(e.target.value)} />
             <div>
-              <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Deadline (optional)</label>
-              <Input type="date" value={newTodoDeadline} onChange={e => setNewTodoDeadline(e.target.value)} className="mt-1 border-rough" />
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Deadline (optional)</label>
+              <Input type="date" value={newTodoDeadline} onChange={e => setNewTodoDeadline(e.target.value)} className="mt-1" />
             </div>
-            <Button onClick={handleAddTodo} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">Add To-Do</Button>
+            <Button onClick={handleAddTodo} className="w-full font-semibold">Add To-Do</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* AI Prompt Dialog */}
       <Dialog open={!!promptGoal} onOpenChange={(open) => { if (!open) { setPromptGoal(null); setParsedResult(null); setAiResponseText(''); setPromptTab('prompt'); } }}>
-        <DialogContent className="bg-card border-rough max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="font-gothic gradient-alien-text text-xl">AI Goal Builder</DialogTitle>
+            <DialogTitle className="text-xl font-bold">AI Goal Builder</DialogTitle>
           </DialogHeader>
           {promptGoal && (
             <Tabs value={promptTab} onValueChange={setPromptTab} className="flex-1 overflow-hidden flex flex-col">
-              <TabsList className="w-full bg-muted/30 border-rough">
-                <TabsTrigger value="prompt" className="font-medieval flex-1 gap-1.5">
+              <TabsList className="w-full">
+                <TabsTrigger value="prompt" className="flex-1 gap-1.5">
                   <FileText className="h-3.5 w-3.5" /> 1. Copy Prompt
                 </TabsTrigger>
-                <TabsTrigger value="import" className="font-medieval flex-1 gap-1.5">
+                <TabsTrigger value="import" className="flex-1 gap-1.5">
                   <Upload className="h-3.5 w-3.5" /> 2. Import Response
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="prompt" className="flex-1 overflow-auto space-y-4 mt-4">
-                <p className="text-sm text-muted-foreground font-medieval">
+                <p className="text-sm text-muted-foreground">
                   Copy this prompt → paste into ChatGPT / Claude / Gemini → copy the response → switch to Import tab.
                 </p>
-                <div className="bg-muted/30 p-4 rounded border-rough whitespace-pre-wrap max-h-72 overflow-auto font-mono text-xs">
+                <div className="bg-accent/50 p-4 rounded-lg whitespace-pre-wrap max-h-72 overflow-auto font-mono text-xs">
                   {generateAIPrompt(promptGoal)}
                 </div>
-                <Button onClick={() => copyPrompt(promptGoal)} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+                <Button onClick={() => copyPrompt(promptGoal)} className="w-full font-semibold">
                   <Copy className="h-4 w-4 mr-2" /> Copy Prompt
                 </Button>
               </TabsContent>
 
               <TabsContent value="import" className="flex-1 overflow-auto space-y-4 mt-4">
-                <p className="text-sm text-muted-foreground font-medieval">
+                <p className="text-sm text-muted-foreground">
                   Paste the AI's response below. It should follow the PHASE / TASK / TODO format.
                 </p>
                 <Textarea
                   value={aiResponseText}
                   onChange={e => setAiResponseText(e.target.value)}
                   placeholder={`PHASE: Foundation | Research and planning | 2026-04-15\n  TASK: Research competitors | Analyze top 5 | 2026-04-01\n    TODO: List features | 2026-03-20\n    TODO: Write comparison | 2026-03-25`}
-                  className="border-rough font-mono text-xs min-h-[120px]"
+                  className="font-mono text-xs min-h-[120px]"
                 />
                 <Button
                   onClick={handleParseResponse}
                   disabled={!aiResponseText.trim()}
                   variant="outline"
-                  className="w-full border-rough font-medieval"
+                  className="w-full"
                 >
                   Parse Response
                 </Button>
 
-                {/* Parse warnings */}
                 {parsedResult && parsedResult.warnings.length > 0 && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded p-3 space-y-1">
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 space-y-1">
                     {parsedResult.warnings.map((w, i) => (
                       <p key={i} className="text-xs text-destructive flex items-center gap-1.5">
                         <AlertCircle className="h-3 w-3 flex-shrink-0" /> {w}
@@ -640,20 +620,19 @@ RULES:
                   </div>
                 )}
 
-                {/* Parsed preview */}
                 {parsedResult && parsedResult.phases.length > 0 && (
-                  <div className="bg-muted/20 border-rough rounded p-3 space-y-3 max-h-60 overflow-auto">
-                    <p className="text-xs text-muted-foreground font-medieval uppercase tracking-widest">Preview</p>
+                  <div className="bg-accent/30 rounded-lg p-3 space-y-3 max-h-60 overflow-auto">
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Preview</p>
                     {parsedResult.phases.map((phase, pi) => (
                       <div key={pi} className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medieval font-bold text-primary">▸ {phase.title}</span>
+                          <span className="text-sm font-semibold text-primary">▸ {phase.title}</span>
                           <Badge variant="outline" className="text-xs">{phase.deadline}</Badge>
                         </div>
                         {phase.tasks.map((task, ti) => (
                           <div key={ti} className="ml-4 space-y-0.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-medieval text-secondary">▸ {task.title}</span>
+                              <span className="text-xs text-teal font-medium">▸ {task.title}</span>
                               <span className="text-xs text-muted-foreground">{task.deadline}</span>
                             </div>
                             {task.todos.map((todo, tdi) => (
@@ -669,9 +648,8 @@ RULES:
                   </div>
                 )}
 
-                {/* Import button */}
                 {parsedResult && parsedResult.phases.length > 0 && (
-                  <Button onClick={handleBulkImport} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+                  <Button onClick={handleBulkImport} className="w-full font-semibold">
                     <Upload className="h-4 w-4 mr-2" />
                     Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos
                   </Button>

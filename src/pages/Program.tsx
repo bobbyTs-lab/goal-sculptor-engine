@@ -32,12 +32,12 @@ const SPLIT_EXERCISE_SUGGESTIONS: Record<SplitDay, CompoundExercise[]> = {
 };
 
 const SPLIT_COLORS: Record<SplitDay, string> = {
-  push: 'bg-primary/20 text-primary border-primary/30',
-  pull: 'bg-secondary/20 text-secondary border-secondary/30',
-  legs: 'bg-accent/20 text-accent-foreground border-accent/30',
-  upper: 'bg-primary/20 text-primary border-primary/30',
-  lower: 'bg-secondary/20 text-secondary border-secondary/30',
-  rest: 'bg-muted/30 text-muted-foreground border-muted/30',
+  push: 'bg-primary/10 text-primary border-primary/20',
+  pull: 'bg-teal/10 text-teal border-teal/20',
+  legs: 'bg-coral/10 text-coral border-coral/20',
+  upper: 'bg-primary/10 text-primary border-primary/20',
+  lower: 'bg-teal/10 text-teal border-teal/20',
+  rest: 'bg-muted text-muted-foreground border-muted',
 };
 
 interface DayPlan {
@@ -72,7 +72,6 @@ export default function ProgramPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
 
-  // Flatten all todos for linking
   const allTodos = useMemo<FlatTodo[]>(() => {
     const todos: FlatTodo[] = [];
     goals.forEach(g => {
@@ -142,20 +141,22 @@ export default function ProgramPage() {
   const currentPlan = plan[selectedDay];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-4.5rem)] max-w-5xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-4.5rem)] max-w-5xl mx-auto relative">
+      {/* Decorative circle */}
+      <div className="section-circle circle-teal w-64 h-64 -top-10 -right-10" />
       
-      {/* ─── DAY SELECTOR ─── */}
-      <div className="flex-shrink-0 pb-3">
+      {/* DAY SELECTOR */}
+      <div className="flex-shrink-0 pb-3 relative z-10">
         {/* Mobile: big swipeable day header */}
         <div className="flex items-center justify-between mb-2 md:hidden">
-          <button onClick={() => goDay(-1)} className="p-3 rounded-xl bg-card/60 border border-border/30 active:bg-muted/50">
+          <button onClick={() => goDay(-1)} className="p-3 rounded-xl bg-card border border-border active:bg-accent">
             <ChevronLeft className="h-5 w-5 text-muted-foreground" />
           </button>
           <div className="text-center flex-1">
-            <h1 className="font-gothic text-2xl gradient-alien-text leading-tight">{DAYS[selectedDay]}</h1>
+            <h1 className="text-2xl font-bold text-foreground leading-tight">{DAYS[selectedDay]}</h1>
             <div className="flex items-center justify-center gap-2 mt-1">
               {selectedDay === todayIdx && (
-                <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">TODAY</Badge>
+                <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">TODAY</Badge>
               )}
               {currentPlan.splitDay !== 'rest' && (
                 <Badge variant="outline" className={`capitalize text-[10px] ${SPLIT_COLORS[currentPlan.splitDay]}`}>
@@ -165,12 +166,12 @@ export default function ProgramPage() {
               )}
             </div>
           </div>
-          <button onClick={() => goDay(1)} className="p-3 rounded-xl bg-card/60 border border-border/30 active:bg-muted/50">
+          <button onClick={() => goDay(1)} className="p-3 rounded-xl bg-card border border-border active:bg-accent">
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
-        {/* Day pills — always visible, scrollable on mobile */}
+        {/* Day pills */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
           {DAYS.map((day, idx) => {
             const isSelected = selectedDay === idx;
@@ -183,16 +184,16 @@ export default function ProgramPage() {
                 className={`
                   flex-shrink-0 snap-center rounded-xl px-3 py-2.5 md:px-4 md:py-2 min-w-[3.5rem] text-center transition-all border
                   ${isSelected 
-                    ? 'bg-primary/15 border-primary/50 ring-1 ring-primary/30' 
-                    : 'bg-card/50 border-border/30 active:bg-card/80'}
+                    ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/20' 
+                    : 'bg-card border-border active:bg-accent'}
                 `}
               >
-                <div className={`text-xs md:text-sm font-medieval font-bold ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                <div className={`text-xs md:text-sm font-semibold ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                   {DAY_SHORT[idx]}
                 </div>
                 {isToday && <div className="w-1.5 h-1.5 rounded-full bg-primary mx-auto mt-1" />}
                 {dayPlan.splitDay !== 'rest' && (
-                  <div className={`text-[9px] mt-0.5 capitalize font-medieval ${isSelected ? 'text-primary/70' : 'text-muted-foreground'}`}>
+                  <div className={`text-[9px] mt-0.5 capitalize ${isSelected ? 'text-primary/70' : 'text-muted-foreground'}`}>
                     {dayPlan.splitDay}
                   </div>
                 )}
@@ -204,9 +205,9 @@ export default function ProgramPage() {
         {/* Desktop day title */}
         <div className="hidden md:flex items-center gap-3 mt-3">
           <Calendar className="h-5 w-5 text-primary" />
-          <h1 className="font-gothic text-2xl gradient-alien-text">{DAYS[selectedDay]}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{DAYS[selectedDay]}</h1>
           {selectedDay === todayIdx && (
-            <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">TODAY</Badge>
+            <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">TODAY</Badge>
           )}
           {currentPlan.splitDay !== 'rest' && (
             <Badge variant="outline" className={`capitalize text-xs ${SPLIT_COLORS[currentPlan.splitDay]}`}>
@@ -215,58 +216,44 @@ export default function ProgramPage() {
             </Badge>
           )}
           <div className="ml-auto flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs font-medieval gap-1.5"
-              onClick={() => setShowTemplates(!showTemplates)}
-            >
-              <Repeat className="h-3.5 w-3.5" />
-              Templates
+            <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={() => setShowTemplates(!showTemplates)}>
+              <Repeat className="h-3.5 w-3.5" /> Templates
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs font-medieval gap-1.5"
-              onClick={() => setShowSettings(!showSettings)}
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              Edit Split
+            <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={() => setShowSettings(!showSettings)}>
+              <Settings2 className="h-3.5 w-3.5" /> Edit Split
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ─── MOBILE ACTION BAR ─── */}
+      {/* MOBILE ACTION BAR */}
       <div className="flex gap-2 mb-2 md:hidden">
         <Button
           variant={showTemplates ? "default" : "outline"}
           size="sm"
-          className="flex-1 text-xs font-medieval gap-1.5 h-9"
+          className="flex-1 text-xs gap-1.5 h-9"
           onClick={() => { setShowTemplates(!showTemplates); setShowSettings(false); }}
         >
-          <Repeat className="h-3.5 w-3.5" />
-          Templates
+          <Repeat className="h-3.5 w-3.5" /> Templates
         </Button>
         <Button
           variant={showSettings ? "default" : "outline"}
           size="sm"
-          className="flex-1 text-xs font-medieval gap-1.5 h-9"
+          className="flex-1 text-xs gap-1.5 h-9"
           onClick={() => { setShowSettings(!showSettings); setShowTemplates(false); }}
         >
-          <Settings2 className="h-3.5 w-3.5" />
-          Edit Split
+          <Settings2 className="h-3.5 w-3.5" /> Edit Split
         </Button>
         {currentPlan.splitDay !== 'rest' && (
           <Link to="/workouts" className="flex-1">
-            <Button size="sm" className="w-full gradient-alien text-primary-foreground font-bold font-medieval h-9 text-xs">
-              ⚔ Workout
+            <Button size="sm" className="w-full font-semibold h-9 text-xs">
+              Workout
             </Button>
           </Link>
         )}
       </div>
 
-      {/* ─── SETTINGS / TEMPLATES PANELS ─── */}
+      {/* SETTINGS / TEMPLATES PANELS */}
       <AnimatePresence>
         {showSettings && (
           <motion.div
@@ -275,10 +262,10 @@ export default function ProgramPage() {
             exit={{ opacity: 0, height: 0 }}
             className="flex-shrink-0 overflow-hidden mb-2"
           >
-            <div className="border border-border/30 rounded-xl p-3 bg-card/60 space-y-3">
+            <div className="border border-border rounded-xl p-3 bg-card shadow-sm space-y-3">
               <div className="flex items-center gap-2">
                 <Select value={currentPlan.splitDay} onValueChange={(v) => updateDay(selectedDay, { splitDay: v as SplitDay })}>
-                  <SelectTrigger className="flex-1 h-10 border-rough text-sm font-medieval">
+                  <SelectTrigger className="flex-1 h-10 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -288,7 +275,7 @@ export default function ProgramPage() {
                   </SelectContent>
                 </Select>
                 <Select onValueChange={(v) => addExercise(selectedDay, v as CompoundExercise)}>
-                  <SelectTrigger className="flex-1 h-10 border-rough text-sm font-medieval">
+                  <SelectTrigger className="flex-1 h-10 text-sm">
                     <SelectValue placeholder="+ Exercise" />
                   </SelectTrigger>
                   <SelectContent>
@@ -301,7 +288,7 @@ export default function ProgramPage() {
               {currentPlan.exercises.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {currentPlan.exercises.map(ex => (
-                    <Badge key={ex} variant="outline" className="border-primary/30 text-sm font-medieval py-1 px-2.5 group">
+                    <Badge key={ex} variant="outline" className="text-sm py-1 px-2.5 group">
                       {EXERCISE_LABELS[ex]}
                       <button onClick={() => removeExercise(selectedDay, ex)} className="ml-1.5 opacity-50 group-hover:opacity-100">
                         <X className="h-3.5 w-3.5" />
@@ -323,15 +310,15 @@ export default function ProgramPage() {
             exit={{ opacity: 0, height: 0 }}
             className="flex-shrink-0 overflow-hidden mb-2"
           >
-            <div className="border border-border/30 rounded-xl p-3 bg-card/60">
+            <div className="border border-border rounded-xl p-3 bg-card shadow-sm">
               <RepeatableBlockManager />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ─── PLANNER — fills remaining space ─── */}
-      <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-border/30 bg-card/40">
+      {/* PLANNER */}
+      <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <DailyTimeBlocks
           dayName={DAYS[selectedDay]}
           onToggleTodo={(todoId) => {
@@ -349,8 +336,8 @@ export default function ProgramPage() {
       {currentPlan.splitDay !== 'rest' && (
         <div className="hidden md:block flex-shrink-0 pt-3">
           <Link to="/workouts">
-            <Button className="w-full gradient-alien text-primary-foreground font-bold font-gothic text-base py-4">
-              ⚔ Start {currentPlan.splitDay} Workout
+            <Button className="w-full font-bold text-base py-4">
+              Start {currentPlan.splitDay} Workout
             </Button>
           </Link>
         </div>

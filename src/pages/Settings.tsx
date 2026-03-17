@@ -6,10 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Trash2, Quote, AlertTriangle, Weight, Volume2 } from 'lucide-react';
+import { Download, Upload, Trash2, Quote, AlertTriangle, Weight } from 'lucide-react';
 import { exportAllData, importAllData, clearAllData, loadSettings, saveSettings } from '@/lib/storage';
 import { toast } from 'sonner';
-import { EmberCard, FlickerIn } from '@/components/EmberAnimations';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState(() => loadSettings());
@@ -46,9 +45,7 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImportText(ev.target?.result as string);
-    };
+    reader.onload = (ev) => { setImportText(ev.target?.result as string); };
     reader.readAsText(file);
   };
 
@@ -71,161 +68,113 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <FlickerIn>
-        <div>
-          <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Settings</h1>
-          <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Data management & customization</p>
-        </div>
-      </FlickerIn>
+    <div className="max-w-3xl mx-auto space-y-6 relative">
+      {/* Decorative circle */}
+      <div className="section-circle circle-violet w-56 h-56 -top-10 -right-10" />
 
-      <div className="divider-alien" />
+      <div className="relative z-10">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Settings</h1>
+        <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Data management & customization</p>
+      </div>
 
       {/* Body Metrics */}
-      <EmberCard delay={0}>
-        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-medieval">
-              <Weight className="h-5 w-5 text-primary" /> Body Metrics
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 relative z-10">
-            <div className="flex items-center gap-4">
-              <Label className="font-medieval w-32">Bodyweight (lbs)</Label>
-              <Input
-                type="number"
-                value={settings.bodyweight}
-                onChange={e => updateSettings({ bodyweight: Number(e.target.value) })}
-                className="w-32 border-rough"
-                min={50}
-                max={500}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground font-medieval">Used for strength standards comparison and 1RM calculations</p>
-          </CardContent>
-        </Card>
-      </EmberCard>
-
-      {/* Ambient Sound */}
-      <EmberCard delay={0.05}>
-        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-medieval">
-              <Volume2 className="h-5 w-5 text-secondary" /> Ambient Sound
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 relative z-10">
-            <div className="flex items-center justify-between">
-              <Label className="font-medieval">Enable fire ambience toggle in header</Label>
-              <Switch
-                checked={settings.ambientSoundEnabled}
-                onCheckedChange={(checked) => updateSettings({ ambientSoundEnabled: checked })}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground font-medieval">Crackling fire sound generated via Web Audio API — no external files needed</p>
-          </CardContent>
-        </Card>
-      </EmberCard>
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Weight className="h-5 w-5 text-primary" /> Body Metrics
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Label className="w-32">Bodyweight (lbs)</Label>
+            <Input type="number" value={settings.bodyweight} onChange={e => updateSettings({ bodyweight: Number(e.target.value) })} className="w-32" min={50} max={500} />
+          </div>
+          <p className="text-xs text-muted-foreground">Used for strength standards comparison and 1RM calculations</p>
+        </CardContent>
+      </Card>
 
       {/* Motivational Quotes */}
-      <EmberCard delay={0.1}>
-        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-medieval">
-              <Quote className="h-5 w-5 text-primary" /> Motivational Quotes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 relative z-10">
-            <div className="flex items-center justify-between">
-              <Label className="font-medieval">Show quotes on dashboard</Label>
-              <Switch
-                checked={settings.quotesEnabled}
-                onCheckedChange={(checked) => updateSettings({ quotesEnabled: checked })}
-              />
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Quote className="h-5 w-5 text-primary" /> Motivational Quotes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Show quotes on dashboard</Label>
+            <Switch checked={settings.quotesEnabled} onCheckedChange={(checked) => updateSettings({ quotesEnabled: checked })} />
+          </div>
+          {settings.quotesEnabled && (
+            <div>
+              <Label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">
+                Custom Quotes (one per line, leave empty for defaults)
+              </Label>
+              <Textarea className="mt-1 h-32 font-mono text-xs" placeholder="Enter your own quotes, one per line..." value={settings.customQuotes.join('\n')} onChange={e => updateQuotes(e.target.value)} />
             </div>
-            {settings.quotesEnabled && (
-              <div>
-                <Label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">
-                  Custom Quotes (one per line, leave empty for defaults)
-                </Label>
-                <Textarea
-                  className="mt-1 border-rough h-32 font-mono text-xs"
-                  placeholder="Enter your own quotes, one per line..."
-                  value={settings.customQuotes.join('\n')}
-                  onChange={e => updateQuotes(e.target.value)}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </EmberCard>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Data Management */}
-      <EmberCard delay={0.15}>
-        <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-medieval">
-              <Download className="h-5 w-5 text-secondary" /> Data Management
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Button onClick={handleExport} className="gradient-alien text-primary-foreground font-bold font-medieval">
-                <Download className="h-4 w-4 mr-2" /> Export All Data
-              </Button>
-              <Button variant="outline" className="border-rough font-medieval" onClick={() => setShowImport(true)}>
-                <Upload className="h-4 w-4 mr-2" /> Import Data
-              </Button>
-            </div>
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5 text-primary" /> Data Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button onClick={handleExport} className="font-semibold">
+              <Download className="h-4 w-4 mr-2" /> Export All Data
+            </Button>
+            <Button variant="outline" onClick={() => setShowImport(true)}>
+              <Upload className="h-4 w-4 mr-2" /> Import Data
+            </Button>
+          </div>
 
-            <div className="divider-alien" />
+          <div className="h-px bg-border" />
 
-            <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10 font-medieval w-full">
-                  <Trash2 className="h-4 w-4 mr-2" /> Clear All Data
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-rough">
-                <DialogHeader>
-                  <DialogTitle className="font-gothic text-destructive text-xl flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" /> Confirm Delete
-                  </DialogTitle>
-                </DialogHeader>
-                <p className="text-sm text-muted-foreground font-medieval">
-                  This will permanently delete all your goals, workouts, and settings. This action cannot be undone.
-                </p>
-                <div className="flex gap-3 mt-4">
-                  <Button variant="outline" className="flex-1 border-rough font-medieval" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
-                  <Button variant="destructive" className="flex-1 font-medieval font-bold" onClick={handleClearAll}>Delete Everything</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-      </EmberCard>
+          <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10 w-full">
+                <Trash2 className="h-4 w-4 mr-2" /> Clear All Data
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-destructive text-xl flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" /> Confirm Delete
+                </DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete all your goals, workouts, and settings. This action cannot be undone.
+              </p>
+              <div className="flex gap-3 mt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
+                <Button variant="destructive" className="flex-1 font-semibold" onClick={handleClearAll}>Delete Everything</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
 
       {/* Import Dialog */}
       <Dialog open={showImport} onOpenChange={setShowImport}>
-        <DialogContent className="bg-card border-rough max-w-lg">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-gothic gradient-alien-text text-xl">Import Data</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Import Data</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label className="text-sm text-muted-foreground font-medieval">Upload JSON file</Label>
-              <Input type="file" accept=".json" onChange={handleFileImport} className="mt-1 border-rough" />
+              <Label className="text-sm text-muted-foreground">Upload JSON file</Label>
+              <Input type="file" accept=".json" onChange={handleFileImport} className="mt-1" />
             </div>
             <div>
-              <Label className="text-sm text-muted-foreground font-medieval">Or paste JSON data</Label>
-              <Textarea
-                className="mt-1 border-rough h-40 font-mono text-xs"
-                placeholder='{"goals":[],"sessions":[],...}'
-                value={importText}
-                onChange={e => setImportText(e.target.value)}
-              />
+              <Label className="text-sm text-muted-foreground">Or paste JSON data</Label>
+              <Textarea className="mt-1 h-40 font-mono text-xs" placeholder='{"goals":[],"sessions":[],...}' value={importText} onChange={e => setImportText(e.target.value)} />
             </div>
-            <Button onClick={handleImport} disabled={!importText.trim()} className="w-full gradient-alien text-primary-foreground font-bold font-medieval">
+            <Button onClick={handleImport} disabled={!importText.trim()} className="w-full font-semibold">
               <Upload className="h-4 w-4 mr-2" /> Import
             </Button>
           </div>
