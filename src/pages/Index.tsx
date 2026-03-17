@@ -1,24 +1,25 @@
 import { useGoals } from '@/hooks/useGoals';
 import { useWorkouts } from '@/hooks/useWorkouts';
-import { calculateGoalProgress } from '@/types/goals';
 import { getPersonalRecords, getWeeklyVolume } from '@/lib/progressive-overload';
 import { EXERCISE_LABELS } from '@/types/workout';
 import { checkAchievements } from '@/lib/achievements';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Dumbbell, Trophy, TrendingUp, Calendar } from 'lucide-react';
+import { Target, Dumbbell, Trophy, TrendingUp, Settings, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EmberCard, EmberStagger, EmberText, FlickerIn } from '@/components/EmberAnimations';
-import { ProgressRing } from '@/components/ProgressRing';
 import { BodyDiagram } from '@/components/BodyDiagram';
-import { MotivationalQuotes } from '@/components/MotivationalQuotes';
-import { AchievementSystem } from '@/components/AchievementSystem';
-import { StrengthRadar } from '@/components/StrengthRadar';
 import { loadSettings, loadAchievements, loadWeeklyPlan } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function Index() {
   const { goals } = useGoals();
@@ -28,11 +29,9 @@ export default function Index() {
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
   const settings = loadSettings();
   const unlockedAchievements = loadAchievements();
-
   const { all: achievements } = checkAchievements(sessions, unlockedAchievements);
   const unlockedCount = achievements.filter(a => a.unlocked).length;
 
-  // Today's workout from plan
   const todayPlan = useMemo(() => {
     const plan = loadWeeklyPlan();
     if (!plan) return null;
@@ -40,155 +39,98 @@ export default function Index() {
     return plan.days[todayIdx];
   }, []);
 
+  const stats = [
+    { icon: Target, value: goals.length, label: 'Goals' },
+    { icon: Dumbbell, value: sessions.length, label: 'Sessions' },
+    { icon: Trophy, value: `${unlockedCount}/${achievements.length}`, label: 'Badges' },
+    { icon: TrendingUp, value: latestVolume.toLocaleString(), label: 'Volume' },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 md:space-y-10">
-      {/* Hero — compact on mobile */}
-      <div className="text-center py-4 md:py-12 relative">
-        <FlickerIn>
-          <h1 className="font-gothic text-4xl md:text-7xl gradient-alien-text mb-2 md:mb-4 tracking-wide relative ember-particles">
-            GoalForge
-          </h1>
-        </FlickerIn>
-        <EmberText delay={0.4}>
-          <p className="font-medieval text-sm md:text-xl text-muted-foreground glow-green-text">
-            ⚔ Forge your goals. Build your strength. ⚔
-          </p>
-        </EmberText>
-        <EmberText delay={0.6}>
-          <div className="divider-alien mt-4 md:mt-8" />
-        </EmberText>
-      </div>
+    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6">
+      {/* Greeting Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between pt-2"
+      >
+        <div>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">{getGreeting()}</h1>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">GoalForge</p>
+        </div>
+        <Link to="/settings">
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </Link>
+      </motion.div>
 
-      {/* Motivational Quote */}
-      <EmberCard delay={0.1}>
-        <MotivationalQuotes
-          enabled={settings.quotesEnabled}
-          customQuotes={settings.customQuotes.length > 0 ? settings.customQuotes : undefined}
-        />
-      </EmberCard>
-
-      {/* Today's Workout Widget */}
-      {todayPlan && todayPlan.splitDay !== 'rest' && (
-        <EmberCard delay={0.15}>
-          <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80">
-            <CardHeader className="pb-2 relative z-10">
-              <CardTitle className="text-sm font-medieval flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" />
-                Today's Workout — {DAYS[(new Date().getDay() + 6) % 7]}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="flex items-center gap-3 flex-wrap">
-                <Badge variant="outline" className="border-primary/30 font-medieval capitalize">{todayPlan.splitDay}</Badge>
-                {todayPlan.exercises.map((ex: string) => (
-                  <Badge key={ex} className="bg-primary/20 text-primary border-primary/30 font-medieval text-xs">
-                    {EXERCISE_LABELS[ex as keyof typeof EXERCISE_LABELS] || ex}
-                  </Badge>
-                ))}
-                <Link to="/workouts" className="ml-auto">
-                  <Button size="sm" className="gradient-alien text-primary-foreground font-bold font-medieval">
-                    ⚔ Start
-                  </Button>
-                </Link>
+      {/* Today's Workout Card */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        {todayPlan && todayPlan.splitDay !== 'rest' ? (
+          <div className="rounded-xl bg-card border border-border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Today — {DAYS[(new Date().getDay() + 6) % 7]}
+                </p>
+                <p className="text-lg font-semibold text-foreground capitalize mt-0.5">{todayPlan.splitDay} Day</p>
               </div>
-            </CardContent>
-          </Card>
-        </EmberCard>
-      )}
+              <Link to="/workouts">
+                <Button size="sm" className="bg-primary text-primary-foreground font-semibold">
+                  Start
+                </Button>
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {todayPlan.exercises.map((ex: string) => (
+                <Badge key={ex} variant="secondary" className="text-xs font-medium">
+                  {EXERCISE_LABELS[ex as keyof typeof EXERCISE_LABELS] || ex}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ) : todayPlan?.splitDay === 'rest' ? (
+          <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-3">
+            <Moon className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Rest Day</p>
+              <p className="text-xs text-muted-foreground">Recovery is part of the process</p>
+            </div>
+          </div>
+        ) : (
+          <Link to="/program">
+            <div className="rounded-xl border border-dashed border-border p-4 text-center hover:border-primary/50 transition-colors">
+              <p className="text-sm text-muted-foreground">No program set up</p>
+              <p className="text-xs text-primary mt-1 font-medium">Set up your program →</p>
+            </div>
+          </Link>
+        )}
+      </motion.div>
 
-      {/* Stats row */}
-      <EmberStagger className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { icon: Target, value: goals.length, label: 'Active Goals', color: 'primary', glow: 'glow-green-text' },
-          { icon: Dumbbell, value: sessions.length, label: 'Sessions', color: 'primary', glow: 'glow-green-text' },
-          { icon: Trophy, value: `${unlockedCount}/${achievements.length}`, label: 'Badges', color: 'secondary', glow: 'glow-gold-text' },
-          { icon: TrendingUp, value: latestVolume.toLocaleString(), label: 'Weekly Vol', color: 'secondary', glow: 'glow-gold-text' },
-        ].map((stat, i) => (
-          <EmberCard key={stat.label} delay={i * 0.1}>
-            <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
-              <CardContent className="pt-6 text-center relative z-10">
-                <stat.icon className={`h-7 w-7 mx-auto text-${stat.color} mb-2 drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]`} />
-                <p className={`text-3xl font-bold font-medieval ${stat.glow}`}>{stat.value}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">{stat.label}</p>
-              </CardContent>
-            </Card>
-          </EmberCard>
+      {/* Stats Strip */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex gap-2"
+      >
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="flex-1 flex flex-col items-center gap-1 rounded-lg bg-card border border-border py-3 px-2"
+          >
+            <stat.icon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-lg font-bold text-foreground leading-none">{stat.value}</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+          </div>
         ))}
-      </EmberStagger>
+      </motion.div>
 
-      {/* Body Diagram + Strength Radar side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <EmberCard delay={0.3}>
-          <BodyDiagram prs={prs} />
-        </EmberCard>
-        <EmberCard delay={0.35}>
-          <StrengthRadar prs={prs} bodyweight={settings.bodyweight} />
-        </EmberCard>
-      </div>
-
-      {/* Achievement System */}
-      <EmberCard delay={0.4}>
-        <AchievementSystem achievements={achievements} />
-      </EmberCard>
-
-      {/* Quick links */}
-      <EmberStagger className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <EmberCard delay={0}>
-          <Link to="/goals">
-            <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-green transition-all duration-500 cursor-pointer group crt-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-green-text transition-all">
-                  <Target className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]" /> Goals
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="relative z-10">
-                {goals.length > 0 ? (
-                  <div className="space-y-3">
-                    {goals.slice(0, 3).map(g => (
-                      <div key={g.id} className="flex items-center justify-between">
-                        <span className="text-sm truncate font-medieval">{g.title}</span>
-                        <ProgressRing value={calculateGoalProgress(g)} size={36} strokeWidth={3} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground font-medieval italic">Create your first goal →</p>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        </EmberCard>
-
-        <EmberCard delay={0.15}>
-          <Link to="/workouts">
-            <Card className="border-rough border-animated relative overflow-hidden scanlines bg-card/80 hover:glow-gold transition-all duration-500 cursor-pointer group crt-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 font-gothic text-2xl group-hover:glow-gold-text transition-all">
-                  <Dumbbell className="h-6 w-6 text-secondary drop-shadow-[0_0_8px_hsl(42,100%,50%,0.6)]" /> Workouts
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="relative z-10">
-                {prs.length > 0 ? (
-                  <div className="space-y-3">
-                    {prs.slice(0, 3).map(pr => (
-                      <div key={pr.exercise} className="flex items-center justify-between">
-                        <span className="text-sm font-medieval">{EXERCISE_LABELS[pr.exercise]}</span>
-                        <span className="text-sm font-bold text-secondary glow-gold-text">{pr.weight} lbs</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground font-medieval italic">Start your first session →</p>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        </EmberCard>
-      </EmberStagger>
-
-      <EmberText delay={0.5}>
-        <div className="divider-alien" />
-      </EmberText>
+      {/* Body Diagram — Full Width Centerpiece */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <BodyDiagram prs={prs} />
+      </motion.div>
     </div>
   );
 }

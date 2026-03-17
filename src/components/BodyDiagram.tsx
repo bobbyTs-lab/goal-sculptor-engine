@@ -1,26 +1,21 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CompoundExercise, EXERCISE_LABELS, PersonalRecord } from '@/types/workout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { X } from 'lucide-react';
 
 // Gold thresholds — realistic "advanced intermediate" 1RM standards (lbs)
-// Pull-ups use total reps in a set as the metric instead of weight
 const GOLD_THRESHOLDS: Record<CompoundExercise, number> = {
   squat: 315,
   deadlift: 405,
   bench_press: 225,
   overhead_press: 155,
   barbell_row: 205,
-  pull_up: 15, // reps — bodyweight mastery, not added weight
+  pull_up: 15,
 };
 
-// For pull-ups, we use reps instead of weight for the ratio
 function getExerciseRatio(exercise: CompoundExercise, pr: PersonalRecord | undefined): number {
   if (!pr) return 0;
-  if (exercise === 'pull_up') {
-    // Use best reps as the metric
-    return Math.min(pr.reps / GOLD_THRESHOLDS[exercise], 1);
-  }
+  if (exercise === 'pull_up') return Math.min(pr.reps / GOLD_THRESHOLDS[exercise], 1);
   return Math.min(pr.weight / GOLD_THRESHOLDS[exercise], 1);
 }
 
@@ -31,7 +26,6 @@ function getExerciseDisplay(exercise: CompoundExercise, pr: PersonalRecord | und
   return { current: pr ? `${pr.weight} lbs` : '—', gold: `${GOLD_THRESHOLDS[exercise]} lbs` };
 }
 
-// Which exercises map to which muscle groups
 const MUSCLE_EXERCISE_MAP: Record<string, CompoundExercise[]> = {
   chest: ['bench_press'],
   shoulders: ['overhead_press', 'bench_press'],
@@ -50,70 +44,128 @@ const MUSCLE_EXERCISE_MAP: Record<string, CompoundExercise[]> = {
 function getMuscleRatio(muscle: string, prs: PersonalRecord[]): number {
   const exercises = MUSCLE_EXERCISE_MAP[muscle] || [];
   if (exercises.length === 0) return 0;
-  
   const ratios = exercises.map(ex => {
     const pr = prs.find(p => p.exercise === ex);
     return getExerciseRatio(ex, pr);
   });
-  
   return ratios.length > 0 ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 0;
 }
 
 function getMuscleColor(ratio: number): string {
+  // Green (novice) → Gold (advanced)
   const hue = 130 - ratio * 88;
   const lightness = 40 + ratio * 15;
   return `hsl(${hue} 100% ${lightness}%)`;
 }
 
-function getMuscleGlow(ratio: number): string {
-  const hue = 130 - ratio * 88;
-  return `drop-shadow(0 0 ${4 + ratio * 8}px hsl(${hue} 100% 50% / ${0.3 + ratio * 0.5}))`;
-}
+// Anatomical muscle paths — front view, standing, arms at sides slightly out
+// ViewBox: 0 0 200 500
+const MUSCLE_PATHS: Record<string, string[]> = {
+  traps: [
+    // Left trap - from neck to shoulder
+    'M88 105 C85 102,78 100,72 102 L72 108 C76 110,82 111,88 112 Z',
+    // Right trap
+    'M112 105 C115 102,122 100,128 102 L128 108 C124 110,118 111,112 112 Z',
+  ],
+  shoulders: [
+    // Left deltoid - rounded cap
+    'M72 102 C62 100,55 106,54 114 C53 120,56 126,62 128 L72 124 C72 118,72 110,72 102 Z',
+    // Right deltoid
+    'M128 102 C138 100,145 106,146 114 C147 120,144 126,138 128 L128 124 C128 118,128 110,128 102 Z',
+  ],
+  chest: [
+    // Left pec - fan shape from sternum to shoulder
+    'M88 112 C82 110,76 112,72 118 C70 124,72 130,76 134 L88 140 C92 136,94 128,92 120 Z',
+    // Right pec
+    'M112 112 C118 110,124 112,128 118 C130 124,128 130,124 134 L112 140 C108 136,106 128,108 120 Z',
+  ],
+  biceps: [
+    // Left bicep - upper arm front
+    'M62 128 C58 130,56 136,56 142 C56 150,58 156,62 160 L68 158 C68 152,68 144,68 136 C68 132,66 130,62 128 Z',
+    // Right bicep
+    'M138 128 C142 130,144 136,144 142 C144 150,142 156,138 160 L132 158 C132 152,132 144,132 136 C132 132,134 130,138 128 Z',
+  ],
+  triceps: [
+    // Left tricep - upper arm back (visible from front as side mass)
+    'M68 130 C72 128,74 132,74 138 C74 148,72 156,68 160 L62 158 Z',
+    // Right tricep
+    'M132 130 C128 128,126 132,126 138 C126 148,128 156,132 160 L138 158 Z',
+  ],
+  forearms: [
+    // Left forearm
+    'M56 160 C54 164,52 172,52 180 C52 190,54 198,56 204 L64 202 C64 194,64 184,64 174 C64 168,62 162,60 160 Z',
+    // Right forearm
+    'M144 160 C146 164,148 172,148 180 C148 190,146 198,144 204 L136 202 C136 194,136 184,136 174 C136 168,138 162,140 160 Z',
+  ],
+  core: [
+    // Rectus abdominis - 6-pack region, segmented look via single path
+    'M92 140 L108 140 L108 148 L92 148 Z', // upper abs
+    'M92 150 L108 150 L108 160 L92 160 Z', // mid abs
+    'M92 162 L108 162 L108 172 L92 172 Z', // lower mid
+    'M93 174 L107 174 L106 186 C104 190,96 190,94 186 Z', // lower abs (tapers)
+  ],
+  lats: [
+    // Left lat - visible from front as side torso width
+    'M72 124 C68 130,66 140,68 150 C70 158,74 162,78 160 L78 140 C78 132,76 126,72 124 Z',
+    // Right lat
+    'M128 124 C132 130,134 140,132 150 C130 158,126 162,122 160 L122 140 C122 132,124 126,128 124 Z',
+  ],
+  glutes: [
+    // Hip area visible from front
+    'M82 190 C86 186,92 184,100 185 C108 184,114 186,118 190 L118 200 C114 204,108 206,100 206 C92 206,86 204,82 200 Z',
+  ],
+  quads: [
+    // Left quad - large front thigh
+    'M82 200 C80 206,78 216,78 228 C78 248,80 268,82 288 C84 300,86 310,88 316 L96 316 C96 306,96 290,96 270 C96 246,96 224,96 208 C96 202,92 198,86 198 Z',
+    // Right quad
+    'M118 200 C120 206,122 216,122 228 C122 248,120 268,118 288 C116 300,114 310,112 316 L104 316 C104 306,104 290,104 270 C104 246,104 224,104 208 C104 202,108 198,114 198 Z',
+  ],
+  hamstrings: [
+    // Inner thigh visible from front - left
+    'M96 206 C98 204,100 204,100 206 L100 310 L96 310 Z',
+    // Inner thigh - right
+    'M104 206 C102 204,100 204,100 206 L100 310 L104 310 Z',
+  ],
+  calves: [
+    // Left calf
+    'M82 318 C80 324,78 336,78 348 C78 360,80 372,82 380 C84 386,88 388,90 384 C90 374,90 358,90 344 C90 334,88 326,86 320 Z',
+    // Right calf
+    'M118 318 C120 324,122 336,122 348 C122 360,120 372,118 380 C116 386,112 388,110 384 C110 374,110 358,110 344 C110 334,112 326,114 320 Z',
+  ],
+};
 
-interface MusclePathProps {
-  d: string;
-  muscle: string;
-  ratio: number;
-  onHover: (muscle: string | null) => void;
-  hovered: boolean;
-}
-
-function MusclePath({ d, muscle, ratio, onHover, hovered }: MusclePathProps) {
-  const color = getMuscleColor(ratio);
-  return (
-    <motion.path
-      d={d}
-      fill={color}
-      stroke="hsl(140 18% 7%)"
-      strokeWidth={0.8}
-      style={{ filter: getMuscleGlow(ratio), cursor: 'pointer' }}
-      onMouseEnter={() => onHover(muscle)}
-      onMouseLeave={() => onHover(null)}
-      animate={{
-        scale: hovered ? 1.03 : 1,
-        opacity: hovered ? 1 : 0.85,
-      }}
-      transition={{ duration: 0.2 }}
-    />
-  );
-}
+// Body outline (non-interactive) - head, neck, hands, feet
+const BODY_OUTLINE_PATHS = [
+  // Head
+  'M92 56 C92 42,96 32,100 28 C104 32,108 42,108 56 C108 68,106 76,104 82 C102 86,98 86,96 82 C94 76,92 68,92 56 Z',
+  // Neck
+  'M94 84 L94 105 L106 105 L106 84',
+  // Left hand
+  'M48 204 C46 208,44 214,46 218 C48 220,52 220,54 216 C56 212,56 208,56 204 Z',
+  // Right hand
+  'M152 204 C154 208,156 214,154 218 C152 220,148 220,146 216 C144 212,144 208,144 204 Z',
+  // Left foot
+  'M78 384 C76 388,72 392,74 396 C76 400,84 402,90 398 C92 396,92 390,90 386 Z',
+  // Right foot
+  'M122 384 C124 388,128 392,126 396 C124 400,116 402,110 398 C108 396,108 390,110 386 Z',
+];
 
 interface BodyDiagramProps {
   prs: PersonalRecord[];
 }
 
 export function BodyDiagram({ prs }: BodyDiagramProps) {
-  const [hoveredMuscle, setHoveredMuscle] = useState<string | null>(null);
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
 
   const muscleRatios: Record<string, number> = {};
   Object.keys(MUSCLE_EXERCISE_MAP).forEach(m => {
     muscleRatios[m] = getMuscleRatio(m, prs);
   });
 
-  const hoveredInfo = hoveredMuscle ? {
-    name: hoveredMuscle.charAt(0).toUpperCase() + hoveredMuscle.slice(1),
-    ratio: muscleRatios[hoveredMuscle] || 0,
-    exercises: (MUSCLE_EXERCISE_MAP[hoveredMuscle] || []).map(ex => {
+  const selectedInfo = selectedMuscle ? {
+    name: selectedMuscle.charAt(0).toUpperCase() + selectedMuscle.slice(1),
+    ratio: muscleRatios[selectedMuscle] || 0,
+    exercises: (MUSCLE_EXERCISE_MAP[selectedMuscle] || []).map(ex => {
       const pr = prs.find(p => p.exercise === ex);
       const display = getExerciseDisplay(ex, pr);
       const ratio = getExerciseRatio(ex, pr);
@@ -121,199 +173,143 @@ export function BodyDiagram({ prs }: BodyDiagramProps) {
     }),
   } : null;
 
-  // Vitruvian Man — arms outstretched, inscribed in circle + square
+  // Top-5 muscle ranking
+  const muscleRanking = Object.entries(muscleRatios)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const handleMuscleClick = (muscle: string) => {
+    setSelectedMuscle(prev => prev === muscle ? null : muscle);
+  };
+
   return (
-    <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medieval flex items-center gap-2">
-          🏋️ Muscle Development
-          <span className="text-xs text-muted-foreground ml-auto">
-            <span style={{ color: 'hsl(130 100% 45%)' }}>●</span> Novice → <span style={{ color: 'hsl(42 100% 50%)' }}>●</span> Gold
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="relative z-10">
-        <div className="flex items-start gap-4">
-          <svg viewBox="0 0 500 520" className="w-60 h-60 md:w-72 md:h-72 mx-auto flex-shrink-0">
-            <defs>
-              <style>{`
-                @keyframes dash-flow { to { stroke-dashoffset: -40; } }
-                .spiral-line { animation: dash-flow 3s linear infinite; }
-                @keyframes tick-fade { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.35; } }
-                .tick-mark { animation: tick-fade 4s ease-in-out infinite; }
-              `}</style>
-            </defs>
+    <div className="flex flex-col items-center">
+      {/* Legend */}
+      <div className="flex items-center gap-3 mb-3 text-[10px] text-muted-foreground uppercase tracking-wider">
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(130 100% 40%)' }} />
+          Novice
+        </span>
+        <span className="text-border">→</span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(42 100% 50%)' }} />
+          Gold
+        </span>
+      </div>
 
-            {/* Vitruvian circle */}
-            <circle cx="250" cy="260" r="230" fill="none" stroke="hsl(42 100% 50% / 0.25)" strokeWidth={0.8} />
-            {/* Vitruvian square */}
-            <rect x="68" y="42" width="364" height="448" fill="none" stroke="hsl(42 100% 50% / 0.18)" strokeWidth={0.6} />
+      {/* SVG Figure */}
+      <svg viewBox="0 0 200 420" className="w-full max-w-[280px] mx-auto">
+        {/* Body outline — non-interactive skin tone */}
+        {BODY_OUTLINE_PATHS.map((d, i) => (
+          <path
+            key={`outline-${i}`}
+            d={d}
+            fill="hsl(var(--muted))"
+            stroke="hsl(var(--border))"
+            strokeWidth={0.5}
+          />
+        ))}
 
-            {/* Golden spiral */}
-            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.35)" strokeWidth={0.7} strokeDasharray="6 10">
-              <path d="M250 260 C250 200,300 180,330 190 C370 200,380 250,370 280 C355 330,310 350,280 345 C250 340,235 310,240 290 C245 270,255 262,250 260" />
-            </g>
-            <g className="spiral-line" fill="none" stroke="hsl(42 100% 50% / 0.22)" strokeWidth={0.5} strokeDasharray="5 12" style={{ animationDelay: '1.5s' }}>
-              <path d="M250 260 C250 320,200 340,170 330 C130 320,120 270,130 240 C145 190,190 170,220 175 C250 180,265 210,260 230 C255 248,250 258,250 260" />
-            </g>
+        {/* Muscle groups — interactive */}
+        {Object.entries(MUSCLE_PATHS).map(([muscle, paths]) =>
+          paths.map((d, i) => {
+            const ratio = muscleRatios[muscle] || 0;
+            const isSelected = selectedMuscle === muscle;
+            return (
+              <motion.path
+                key={`${muscle}-${i}`}
+                d={d}
+                fill={getMuscleColor(ratio)}
+                stroke={isSelected ? 'hsl(var(--foreground))' : 'hsl(var(--background))'}
+                strokeWidth={isSelected ? 1.2 : 0.5}
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleMuscleClick(muscle)}
+                animate={{
+                  opacity: selectedMuscle && !isSelected ? 0.4 : 0.9,
+                  scale: isSelected ? 1.02 : 1,
+                }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+              />
+            );
+          })
+        )}
+      </svg>
 
-            {/* Tick marks around circle */}
-            {Array.from({ length: 36 }).map((_, i) => {
-              const a = (i * 10) * Math.PI / 180;
-              const r1 = 226, r2 = i % 3 === 0 ? 237 : 232;
-              return (
-                <line key={`t${i}`} x1={250 + r1 * Math.cos(a)} y1={260 + r1 * Math.sin(a)}
-                  x2={250 + r2 * Math.cos(a)} y2={260 + r2 * Math.sin(a)}
-                  stroke="hsl(42 100% 50% / 0.4)" strokeWidth={i % 3 === 0 ? 0.8 : 0.4}
-                  className="tick-mark" style={{ animationDelay: `${i * 0.1}s` }} />
-              );
-            })}
-
-            {/* Proportion guides */}
-            <line x1="250" y1="30" x2="250" y2="500" stroke="hsl(42 100% 50% / 0.15)" strokeWidth={0.5} strokeDasharray="3 8" />
-            <line x1="50" y1="260" x2="450" y2="260" stroke="hsl(42 100% 50% / 0.15)" strokeWidth={0.5} strokeDasharray="3 8" />
-
-            {/* ===== ORGANIC BODY — Smooth curves ===== */}
-
-            {/* Head — oval with slight jaw taper */}
-            <path d="M250 50 C270 50,282 62,282 80 C282 98,270 112,258 114 C254 115,246 115,242 114 C230 112,218 98,218 80 C218 62,230 50,250 50Z" fill="hsl(140 12% 18%)" stroke="hsl(130 20% 25%)" strokeWidth={0.6} />
-
-            {/* Neck */}
-            <path d="M240 114 C240 114,242 126,243 130 L257 130 C258 126,260 114,260 114" fill="hsl(140 12% 16%)" stroke="hsl(130 18% 22%)" strokeWidth={0.4} />
-
-            {/* Traps — curved mounds */}
-            <MusclePath muscle="traps" ratio={muscleRatios.traps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'traps'}
-              d="M222 126 C230 118,242 116,250 118 C258 116,270 118,278 126 L276 140 C268 134,258 130,250 131 C242 130,232 134,224 140 Z" />
-
-            {/* Shoulders — rounded deltoid caps */}
-            <MusclePath muscle="shoulders" ratio={muscleRatios.shoulders} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'shoulders'}
-              d="M222 126 C210 120,196 122,190 130 C186 136,186 144,190 150 L210 148 C216 142,220 136,222 130 Z" />
-            <MusclePath muscle="shoulders" ratio={muscleRatios.shoulders} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'shoulders'}
-              d="M278 126 C290 120,304 122,310 130 C314 136,314 144,310 150 L290 148 C284 142,280 136,278 130 Z" />
-
-            {/* Chest — two pec shapes with natural curve */}
-            <MusclePath muscle="chest" ratio={muscleRatios.chest} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'chest'}
-              d="M224 136 C228 130,238 128,250 130 C262 128,272 130,276 136 L276 160 C270 168,262 172,250 170 C238 172,230 168,224 160 Z" />
-
-            {/* === OUTSTRETCHED ARMS — smooth tapered limbs === */}
-
-            {/* Left bicep */}
-            <MusclePath muscle="biceps" ratio={muscleRatios.biceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'biceps'}
-              d="M190 134 C182 132,170 134,154 142 C142 148,132 154,128 158 L136 166 C142 160,156 152,168 148 C180 144,188 142,192 144 Z" />
-            {/* Left tricep */}
-            <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
-              d="M192 148 C186 150,172 154,158 160 C144 166,134 172,128 176 L136 166 C128 170,126 174,128 178 L140 178 C152 172,170 164,184 158 C192 154,194 152,192 148Z" />
-
-            {/* Right bicep */}
-            <MusclePath muscle="biceps" ratio={muscleRatios.biceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'biceps'}
-              d="M310 134 C318 132,330 134,346 142 C358 148,368 154,372 158 L364 166 C358 160,344 152,332 148 C320 144,312 142,308 144 Z" />
-            {/* Right tricep */}
-            <MusclePath muscle="triceps" ratio={muscleRatios.triceps} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'triceps'}
-              d="M308 148 C314 150,328 154,342 160 C356 166,366 172,372 176 L364 166 C372 170,374 174,372 178 L360 178 C348 172,330 164,316 158 C308 154,306 152,308 148Z" />
-
-            {/* Left forearm */}
-            <MusclePath muscle="forearms" ratio={muscleRatios.forearms} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'forearms'}
-              d="M128 162 C118 168,100 178,86 186 C80 190,76 194,74 198 L82 202 C86 196,96 190,110 182 C122 176,132 170,136 168 Z" />
-            {/* Right forearm */}
-            <MusclePath muscle="forearms" ratio={muscleRatios.forearms} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'forearms'}
-              d="M372 162 C382 168,400 178,414 186 C420 190,424 194,426 198 L418 202 C414 196,404 190,390 182 C378 176,368 170,364 168 Z" />
-
-            {/* Hands — organic rounded */}
-            <path d="M74 198 C68 200,62 206,60 212 C58 218,62 222,68 220 C72 218,78 212,82 206 Z" fill="hsl(140 12% 16%)" />
-            <path d="M426 198 C432 200,438 206,440 212 C442 218,438 222,432 220 C428 218,422 212,418 206 Z" fill="hsl(140 12% 16%)" />
-
-            {/* Lats — side torso sweep */}
-            <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
-              d="M210 148 C208 156,206 168,208 180 C210 192,214 196,218 192 L224 160 C222 152,216 148,210 148Z" />
-            <MusclePath muscle="lats" ratio={muscleRatios.lats} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'lats'}
-              d="M290 148 C292 156,294 168,292 180 C290 192,286 196,282 192 L276 160 C278 152,284 148,290 148Z" />
-
-            {/* Core — ab column with subtle narrowing at waist */}
-            <MusclePath muscle="core" ratio={muscleRatios.core} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'core'}
-              d="M230 164 C236 160,244 158,250 159 C256 158,264 160,270 164 L268 240 C264 248,258 252,250 252 C242 252,236 248,232 240 Z" />
-
-            {/* Glutes — rounded seat */}
-            <MusclePath muscle="glutes" ratio={muscleRatios.glutes} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'glutes'}
-              d="M226 244 C232 238,240 236,250 237 C260 236,268 238,274 244 L274 268 C268 278,260 282,250 282 C240 282,232 278,226 268 Z" />
-
-            {/* Quads — tapered thighs with natural curve */}
-            <MusclePath muscle="quads" ratio={muscleRatios.quads} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'quads'}
-              d="M226 268 C228 264,234 260,240 262 L238 374 C234 380,228 382,222 378 C218 374,218 368,220 360 Z" />
-            <MusclePath muscle="quads" ratio={muscleRatios.quads} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'quads'}
-              d="M274 268 C272 264,266 260,260 262 L262 374 C266 380,272 382,278 378 C282 374,282 368,280 360 Z" />
-
-            {/* Hamstrings — inner thigh */}
-            <MusclePath muscle="hamstrings" ratio={muscleRatios.hamstrings} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'hamstrings'}
-              d="M242 264 C246 260,250 259,254 260 C258 260,260 262,260 264 L258 372 C254 376,246 376,242 372 Z" />
-
-            {/* Calves — diamond-shaped with taper */}
-            <MusclePath muscle="calves" ratio={muscleRatios.calves} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'calves'}
-              d="M222 382 C226 376,232 374,236 378 L236 386 C238 400,236 420,232 440 C230 448,226 452,222 448 C218 440,216 420,218 400 C218 392,220 386,222 382Z" />
-            <MusclePath muscle="calves" ratio={muscleRatios.calves} onHover={setHoveredMuscle} hovered={hoveredMuscle === 'calves'}
-              d="M278 382 C274 376,268 374,264 378 L264 386 C262 400,264 420,268 440 C270 448,274 452,278 448 C282 440,284 420,282 400 C282 392,280 386,278 382Z" />
-
-            {/* Feet — natural foot shapes */}
-            <path d="M218 448 C214 452,208 456,210 462 C212 466,222 468,232 464 C236 462,236 456,234 452 Z" fill="hsl(140 12% 16%)" />
-            <path d="M282 448 C286 452,292 456,290 462 C288 466,278 468,268 464 C264 462,264 456,266 452 Z" fill="hsl(140 12% 16%)" />
-          </svg>
-
-          {/* Info panel */}
-          <div className="flex-1 min-w-0">
-            {hoveredInfo ? (
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-2"
-              >
-                <h3 className="font-medieval font-bold text-lg" style={{ color: getMuscleColor(hoveredInfo.ratio) }}>
-                  {hoveredInfo.name}
-                </h3>
-                <div className="text-xs text-muted-foreground">
-                  Development: <span className="font-bold" style={{ color: getMuscleColor(hoveredInfo.ratio) }}>
-                    {Math.round(hoveredInfo.ratio * 100)}%
+      {/* Detail Panel — slide up on tap */}
+      <AnimatePresence mode="wait">
+        {selectedInfo ? (
+          <motion.div
+            key={selectedMuscle}
+            initial={{ opacity: 0, y: 20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: 10, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-full mt-4 rounded-xl bg-card border border-border p-4 overflow-hidden"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">{selectedInfo.name}</h3>
+                <p className="text-xs text-muted-foreground">
+                  Development: <span className="font-bold" style={{ color: getMuscleColor(selectedInfo.ratio) }}>
+                    {Math.round(selectedInfo.ratio * 100)}%
                   </span>
-                </div>
-                <div className="space-y-1.5 mt-2">
-                  {hoveredInfo.exercises.map(ex => (
-                    <div key={ex.label} className="text-xs">
-                      <div className="flex justify-between font-medieval">
-                        <span>{ex.label}</span>
-                        <span className={ex.ratio >= 1 ? 'glow-gold-text font-bold' : 'text-muted-foreground'}>
-                          {ex.current} / {ex.gold}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-muted rounded-full mt-0.5 overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: getMuscleColor(ex.ratio) }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(ex.ratio * 100, 100)}%` }}
-                          transition={{ duration: 0.5 }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <div className="text-xs text-muted-foreground font-medieval space-y-2">
-                <p className="italic">Hover over a muscle group to see details</p>
-                <div className="space-y-1 mt-3">
-                  {Object.entries(muscleRatios).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([muscle, ratio]) => (
-                    <div key={muscle} className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getMuscleColor(ratio) }} />
-                      <span className="capitalize">{muscle}</span>
-                      <span className="ml-auto font-bold" style={{ color: getMuscleColor(ratio) }}>
-                        {Math.round(ratio * 100)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                </p>
               </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+              <button
+                onClick={() => setSelectedMuscle(null)}
+                className="p-1 rounded-md hover:bg-muted text-muted-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {selectedInfo.exercises.map(ex => (
+                <div key={ex.label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-foreground font-medium">{ex.label}</span>
+                    <span className={ex.ratio >= 1 ? 'text-secondary font-bold' : 'text-muted-foreground'}>
+                      {ex.current} / {ex.gold}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: getMuscleColor(ex.ratio) }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(ex.ratio * 100, 100)}%` }}
+                      transition={{ duration: 0.4 }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="ranking"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="w-full mt-4 space-y-1.5"
+          >
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Top Muscle Groups</p>
+            {muscleRanking.map(([muscle, ratio]) => (
+              <button
+                key={muscle}
+                onClick={() => setSelectedMuscle(muscle)}
+                className="w-full flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-card transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getMuscleColor(ratio) }} />
+                <span className="capitalize text-foreground">{muscle}</span>
+                <span className="ml-auto font-bold" style={{ color: getMuscleColor(ratio) }}>
+                  {Math.round(ratio * 100)}%
+                </span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
