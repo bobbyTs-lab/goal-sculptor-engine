@@ -27,7 +27,6 @@ export default function Index() {
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
-  const settings = loadSettings();
   const unlockedAchievements = loadAchievements();
   const { all: achievements } = checkAchievements(sessions, unlockedAchievements);
   const unlockedCount = achievements.filter(a => a.unlocked).length;
@@ -47,12 +46,15 @@ export default function Index() {
   ];
 
   return (
-    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6">
+    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6 relative">
+      {/* Decorative circle */}
+      <div className="section-circle circle-coral w-80 h-80 -top-20 -right-20" />
+
       {/* Greeting Bar */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between pt-2"
+        className="flex items-center justify-between pt-2 relative z-10"
       >
         <div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">{getGreeting()}</h1>
@@ -68,7 +70,7 @@ export default function Index() {
       {/* Today's Workout Card */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         {todayPlan && todayPlan.splitDay !== 'rest' ? (
-          <div className="rounded-xl bg-card border border-border p-4">
+          <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -91,7 +93,7 @@ export default function Index() {
             </div>
           </div>
         ) : todayPlan?.splitDay === 'rest' ? (
-          <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-3">
+          <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 shadow-sm">
             <Moon className="h-5 w-5 text-muted-foreground" />
             <div>
               <p className="text-sm font-medium text-foreground">Rest Day</p>
@@ -118,16 +120,16 @@ export default function Index() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex-1 flex flex-col items-center gap-1 rounded-lg bg-card border border-border py-3 px-2"
+            className="flex-1 flex flex-col items-center gap-1 rounded-xl bg-card border border-border py-3 px-2 shadow-sm"
           >
-            <stat.icon className="h-4 w-4 text-muted-foreground" />
+            <stat.icon className="h-4 w-4 text-primary" />
             <span className="text-lg font-bold text-foreground leading-none">{stat.value}</span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
           </div>
         ))}
       </motion.div>
 
-      {/* Body Diagram — Full Width Centerpiece */}
+      {/* Body Diagram */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <BodyDiagram prs={prs} />
       </motion.div>

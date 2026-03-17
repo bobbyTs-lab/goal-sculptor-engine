@@ -1,7 +1,6 @@
 import { Target, Dumbbell, Home, Settings, Calendar, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   Sidebar,
   SidebarContent,
@@ -34,21 +33,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="font-gothic text-2xl gradient-alien-text py-4">
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="inline-block"
-              >
-                GoalForge
-              </motion.span>
-            )}
+          <SidebarGroupLabel className="text-lg font-bold text-primary py-4">
+            {!collapsed && <span>GoalForge</span>}
           </SidebarGroupLabel>
-          <div className="divider-alien mx-2 mb-2" />
+          <div className="h-px bg-border mx-2 mb-2" />
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item, i) => {
+              {navItems.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -56,53 +47,14 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === '/'}
-                        className="relative font-medieval text-base tracking-wide transition-all duration-300 hover:bg-muted/50 group"
-                        activeClassName="text-primary font-bold"
+                        className={`relative text-sm font-medium transition-colors hover:bg-accent ${active ? 'text-primary bg-accent' : 'text-muted-foreground'}`}
+                        activeClassName="text-primary font-semibold"
                       >
                         {active && (
-                          <motion.div
-                            layoutId="sidebar-active-glow"
-                            className="absolute inset-0 rounded-md bg-primary/15 border-l-2 border-primary"
-                            style={{
-                              boxShadow: '0 0 12px hsl(130 100% 40% / 0.3), inset 0 0 12px hsl(280 100% 50% / 0.05)',
-                            }}
-                            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                          />
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-primary" />
                         )}
-
-                        <motion.div
-                          className="absolute inset-0 rounded-md pointer-events-none"
-                          initial={false}
-                          whileHover={{
-                            boxShadow: '0 0 20px hsl(280 100% 50% / 0.15), 0 0 40px hsl(280 100% 50% / 0.05)',
-                          }}
-                        />
-
-                        <motion.div
-                          className="relative z-10 flex items-center"
-                          whileHover={{ x: collapsed ? 0 : 4 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                        >
-                          <motion.span
-                            className="mr-2 inline-flex"
-                            whileHover={{
-                              rotate: [0, -8, 8, -4, 0],
-                              filter: 'drop-shadow(0 0 6px hsl(280 100% 60% / 0.6))',
-                            }}
-                            transition={{ duration: 0.5 }}
-                          >
-                            <item.icon className={`h-5 w-5 transition-all duration-300 ${active ? 'drop-shadow-[0_0_8px_hsl(130,100%,40%,0.6)]' : 'group-hover:drop-shadow-[0_0_6px_hsl(280,100%,60%,0.4)]'}`} />
-                          </motion.span>
-                          {!collapsed && (
-                            <motion.span
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: 0.05 * i }}
-                            >
-                              {item.title}
-                            </motion.span>
-                          )}
-                        </motion.div>
+                        <item.icon className={`h-5 w-5 ${active ? 'text-primary' : ''}`} />
+                        {!collapsed && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -113,7 +65,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
-        <div className="divider-alien mx-2 mb-2" />
+        <div className="h-px bg-border mx-2 mb-2" />
       </SidebarFooter>
     </Sidebar>
   );

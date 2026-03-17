@@ -1,4 +1,4 @@
-import { Home, Calendar, Target, Users, Dumbbell, Settings } from "lucide-react";
+import { Home, Calendar, Target, Users, Dumbbell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 
@@ -31,25 +31,22 @@ export function MobileTabBar() {
               <div
                 className={`p-1.5 rounded-xl transition-all ${
                   active
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-primary/10 text-primary"
                     : "text-muted-foreground"
                 }`}
               >
-                <tab.icon
-                  className={`h-5 w-5 transition-all ${
-                    active
-                      ? "drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]"
-                      : ""
-                  }`}
-                />
+                <tab.icon className="h-5 w-5" />
               </div>
               <span
-                className={`text-[10px] font-medieval leading-none ${
-                  active ? "text-primary font-bold" : "text-muted-foreground"
+                className={`text-[10px] font-medium leading-none ${
+                  active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
                 {tab.title}
               </span>
+              {active && (
+                <div className="w-1 h-1 rounded-full bg-primary" />
+              )}
             </NavLink>
           );
         })}

@@ -13,7 +13,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History, Save, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { EmberCard, EmberText, EmberStagger, FlickerIn } from '@/components/EmberAnimations';
 import { loadTemplates, saveTemplates, generateId, WorkoutTemplate } from '@/lib/storage';
 
 function RestTimer() {
@@ -38,25 +37,17 @@ function RestTimer() {
   };
 
   return (
-    <Card className="border-rough bg-card/80">
+    <Card className="shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2 font-medieval">
-          <Timer className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" /> Rest Timer
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Timer className="h-4 w-4 text-primary" /> Rest Timer
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-3">
-          <Input
-            type="number"
-            value={seconds}
-            onChange={e => setSeconds(Number(e.target.value))}
-            className="w-20 border-rough"
-            min={10}
-            max={300}
-            disabled={running}
-          />
-          <span className="text-sm text-muted-foreground font-medieval">sec</span>
-          <Button size="sm" onClick={start} disabled={running} className="gradient-alien text-primary-foreground font-bold font-medieval">
+          <Input type="number" value={seconds} onChange={e => setSeconds(Number(e.target.value))} className="w-20" min={10} max={300} disabled={running} />
+          <span className="text-sm text-muted-foreground">sec</span>
+          <Button size="sm" onClick={start} disabled={running}>
             {running ? `${timeLeft}s` : 'Start'}
           </Button>
         </div>
@@ -89,9 +80,7 @@ export default function WorkoutsPage() {
     const config = configs.find(c => c.exercise === exercise);
     if (!config) return;
     const defaultSets: SetLog[] = Array.from({ length: config.targetSets }, () => ({
-      reps: config.repRangeMin,
-      weight: config.currentWeight,
-      rpe: 3,
+      reps: config.repRangeMin, weight: config.currentWeight, rpe: 3,
     }));
     setSessionExercises([...sessionExercises, { exercise, sets: defaultSets }]);
   };
@@ -107,15 +96,9 @@ export default function WorkoutsPage() {
   };
 
   const logSession = () => {
-    if (sessionExercises.length === 0) {
-      toast.error('Add at least one exercise!');
-      return;
-    }
+    if (sessionExercises.length === 0) { toast.error('Add at least one exercise!'); return; }
     const exercises: ExerciseLog[] = sessionExercises.map(e => ({
-      exercise: e.exercise,
-      sets: e.sets,
-      date: new Date().toISOString(),
-      notes: sessionNotes || undefined,
+      exercise: e.exercise, sets: e.sets, date: new Date().toISOString(), notes: sessionNotes || undefined,
     }));
     addSession({ date: new Date().toISOString(), splitDay, exercises, notes: sessionNotes || undefined });
     setSessionExercises([]);
@@ -123,20 +106,14 @@ export default function WorkoutsPage() {
     toast.success('Session logged! 🔥');
   };
 
-  // Save as template
   const saveAsTemplate = () => {
     if (sessionExercises.length === 0) return;
     const name = prompt('Template name:');
     if (!name) return;
     const template: WorkoutTemplate = {
-      id: generateId(),
-      name,
-      splitDay,
+      id: generateId(), name, splitDay,
       exercises: sessionExercises.map(e => ({
-        exercise: e.exercise,
-        sets: e.sets.length,
-        weight: e.sets[0]?.weight || 0,
-        reps: e.sets[0]?.reps || 0,
+        exercise: e.exercise, sets: e.sets.length, weight: e.sets[0]?.weight || 0, reps: e.sets[0]?.reps || 0,
       })),
     };
     const updated = [...templates, template];
@@ -145,7 +122,6 @@ export default function WorkoutsPage() {
     toast.success(`Template "${name}" saved!`);
   };
 
-  // Load from template
   const loadFromTemplate = (template: WorkoutTemplate) => {
     setSplitDay(template.splitDay as SplitDay);
     const exercises = template.exercises.map(e => {
@@ -153,9 +129,7 @@ export default function WorkoutsPage() {
       return {
         exercise: e.exercise as CompoundExercise,
         sets: Array.from({ length: e.sets }, () => ({
-          reps: e.reps || config?.repRangeMin || 6,
-          weight: config?.currentWeight || e.weight,
-          rpe: 3,
+          reps: e.reps || config?.repRangeMin || 6, weight: config?.currentWeight || e.weight, rpe: 3,
         })),
       };
     });
@@ -181,33 +155,32 @@ export default function WorkoutsPage() {
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <FlickerIn>
-        <div>
-          <h1 className="font-gothic text-2xl md:text-4xl gradient-alien-text glow-green-text ember-particles relative">Workouts</h1>
-          <p className="text-muted-foreground mt-0.5 text-xs md:text-base font-medieval">Progressive overload · Compound-first</p>
-        </div>
-      </FlickerIn>
+    <div className="max-w-5xl mx-auto space-y-6 relative">
+      {/* Decorative circle */}
+      <div className="section-circle circle-sky w-72 h-72 -top-16 -right-16" />
 
-      <div className="divider-alien" />
+      <div className="relative z-10">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Workouts</h1>
+        <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Progressive overload · Compound-first</p>
+      </div>
 
       <Tabs defaultValue="session" className="space-y-4">
-        <TabsList className="bg-muted/30 border-rough">
-          <TabsTrigger value="session" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Log Session</TabsTrigger>
-          <TabsTrigger value="templates" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Templates</TabsTrigger>
-          <TabsTrigger value="history" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">History</TabsTrigger>
-          <TabsTrigger value="progress" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Progress</TabsTrigger>
-          <TabsTrigger value="prs" className="font-medieval data-[state=active]:text-secondary data-[state=active]:glow-gold-text">PRs</TabsTrigger>
-          <TabsTrigger value="config" className="font-medieval data-[state=active]:text-primary data-[state=active]:glow-green-text">Config</TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="session">Log Session</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="prs">PRs</TabsTrigger>
+          <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
         {/* LOG SESSION TAB */}
         <TabsContent value="session" className="space-y-4">
           <div className="flex gap-4 flex-wrap items-end">
             <div>
-              <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Split Day</label>
+              <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Split Day</label>
               <Select value={splitDay} onValueChange={(v) => setSplitDay(v as SplitDay)}>
-                <SelectTrigger className="w-32 mt-1 border-rough"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-32 mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['push', 'pull', 'legs', 'upper', 'lower'].map(s => (
                     <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
@@ -216,9 +189,9 @@ export default function WorkoutsPage() {
               </Select>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Add Exercise</label>
+              <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Add Exercise</label>
               <Select onValueChange={(v) => addExerciseToSession(v as CompoundExercise)}>
-                <SelectTrigger className="w-48 mt-1 border-rough"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="w-48 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(EXERCISE_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -235,11 +208,11 @@ export default function WorkoutsPage() {
             const suggestion = config ? getProgressionSuggestion(config, recentHistory) : null;
 
             return (
-              <Card key={exIdx} className="border-rough relative overflow-hidden scanlines bg-card/80">
-                <CardHeader className="pb-2 relative z-10">
+              <Card key={exIdx} className="shadow-sm">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2 font-medieval">
-                      <Dumbbell className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" />
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Dumbbell className="h-4 w-4 text-primary" />
                       {EXERCISE_LABELS[ex.exercise]}
                     </CardTitle>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeExercise(exIdx)}>
@@ -247,10 +220,10 @@ export default function WorkoutsPage() {
                     </Button>
                   </div>
                   {suggestion && (
-                    <div className={`text-xs p-2 rounded mt-2 border font-medieval ${
-                      suggestion.type === 'increase_weight' ? 'bg-secondary/10 text-secondary border-secondary/30' :
-                      suggestion.type === 'deload' ? 'bg-destructive/10 text-destructive border-destructive/30' :
-                      'bg-primary/10 text-primary border-primary/30'
+                    <div className={`text-xs p-2 rounded-lg mt-2 border ${
+                      suggestion.type === 'increase_weight' ? 'bg-teal/10 text-teal border-teal/20' :
+                      suggestion.type === 'deload' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                      'bg-primary/10 text-primary border-primary/20'
                     }`}>
                       {suggestion.type === 'increase_weight' && <ArrowUp className="h-3 w-3 inline mr-1" />}
                       {suggestion.type === 'deload' && <ArrowDown className="h-3 w-3 inline mr-1" />}
@@ -259,17 +232,17 @@ export default function WorkoutsPage() {
                     </div>
                   )}
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                   <div className="space-y-2">
-                    <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground font-medieval uppercase tracking-wider">
+                    <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground uppercase tracking-wider font-medium">
                       <span>Set</span><span>Weight</span><span>Reps</span><span>RPE</span>
                     </div>
                     {ex.sets.map((set, setIdx) => (
                       <div key={setIdx} className="grid grid-cols-4 gap-2">
                         <span className="text-sm flex items-center font-bold text-primary">{setIdx + 1}</span>
-                        <Input type="number" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', Number(e.target.value))} className="h-8 border-rough" />
-                        <Input type="number" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))} className="h-8 border-rough" />
-                        <Input type="number" value={set.rpe} onChange={e => updateSet(exIdx, setIdx, 'rpe', Math.min(5, Math.max(1, Number(e.target.value))))} className="h-8 border-rough" min={1} max={5} />
+                        <Input type="number" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', Number(e.target.value))} className="h-8" />
+                        <Input type="number" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))} className="h-8" />
+                        <Input type="number" value={set.rpe} onChange={e => updateSet(exIdx, setIdx, 'rpe', Math.min(5, Math.max(1, Number(e.target.value))))} className="h-8" min={1} max={5} />
                       </div>
                     ))}
                   </div>
@@ -280,26 +253,19 @@ export default function WorkoutsPage() {
 
           {sessionExercises.length > 0 && (
             <div className="space-y-3">
-              {/* Session notes */}
-              <Card className="border-rough bg-card/80">
-                <CardContent className="pt-4 relative z-10">
-                  <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider flex items-center gap-1.5">
+              <Card className="shadow-sm">
+                <CardContent className="pt-4">
+                  <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1.5">
                     <FileText className="h-3 w-3" /> Session Notes
                   </label>
-                  <Textarea
-                    className="mt-1 border-rough h-20 text-xs font-medieval"
-                    placeholder="How did it feel? Any pain? Energy level?"
-                    value={sessionNotes}
-                    onChange={e => setSessionNotes(e.target.value)}
-                  />
+                  <Textarea className="mt-1 h-20 text-xs" placeholder="How did it feel? Any pain? Energy level?" value={sessionNotes} onChange={e => setSessionNotes(e.target.value)} />
                 </CardContent>
               </Card>
-
               <div className="flex gap-3">
-                <Button onClick={logSession} className="flex-1 gradient-alien text-primary-foreground font-bold text-lg py-6 glow-green font-gothic tracking-wide">
-                  ⚔ Log Session ⚔
+                <Button onClick={logSession} className="flex-1 font-bold text-lg py-6">
+                  Log Session
                 </Button>
-                <Button onClick={saveAsTemplate} variant="outline" className="border-rough font-medieval">
+                <Button onClick={saveAsTemplate} variant="outline">
                   <Save className="h-4 w-4 mr-1" /> Save Template
                 </Button>
               </div>
@@ -307,10 +273,10 @@ export default function WorkoutsPage() {
           )}
 
           {sessionExercises.length === 0 && (
-            <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+            <Card className="border-dashed border-2 border-primary/20">
               <CardContent className="flex flex-col items-center justify-center py-16">
-                <Dumbbell className="h-16 w-16 text-primary/40 mb-4 drop-shadow-[0_0_15px_hsl(130,100%,40%,0.4)]" />
-                <p className="text-muted-foreground font-medieval text-lg">Select exercises above to begin</p>
+                <Dumbbell className="h-16 w-16 text-primary/30 mb-4" />
+                <p className="text-muted-foreground text-lg">Select exercises above to begin</p>
               </CardContent>
             </Card>
           )}
@@ -319,42 +285,40 @@ export default function WorkoutsPage() {
         {/* TEMPLATES TAB */}
         <TabsContent value="templates" className="space-y-4">
           {templates.length === 0 ? (
-            <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+            <Card className="border-dashed border-2 border-primary/20">
               <CardContent className="flex flex-col items-center justify-center py-16">
-                <Save className="h-16 w-16 text-primary/40 mb-4" />
-                <p className="text-muted-foreground font-medieval text-lg">No templates yet</p>
-                <p className="text-xs text-muted-foreground font-medieval mt-1">Log a session and save it as a template</p>
+                <Save className="h-16 w-16 text-primary/30 mb-4" />
+                <p className="text-muted-foreground text-lg">No templates yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Log a session and save it as a template</p>
               </CardContent>
             </Card>
           ) : (
-            templates.map((t, i) => (
-              <EmberCard key={t.id} delay={i * 0.05}>
-                <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
-                  <CardContent className="pt-4 relative z-10">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-medieval font-bold">{t.name}</p>
-                        <Badge variant="outline" className="border-primary/30 font-medieval text-xs capitalize mt-1">{t.splitDay}</Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => loadFromTemplate(t)} className="gradient-alien text-primary-foreground font-bold font-medieval text-xs">
-                          Quick Start
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteTemplate(t.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+            templates.map((t) => (
+              <Card key={t.id} className="shadow-sm">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="font-semibold">{t.name}</p>
+                      <Badge variant="outline" className="text-xs capitalize mt-1">{t.splitDay}</Badge>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {t.exercises.map((e, j) => (
-                        <Badge key={j} variant="outline" className="border-primary/20 text-xs font-medieval">
-                          {EXERCISE_LABELS[e.exercise as CompoundExercise] || e.exercise} · {e.sets}×{e.reps}
-                        </Badge>
-                      ))}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => loadFromTemplate(t)} className="text-xs font-semibold">
+                        Quick Start
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteTemplate(t.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              </EmberCard>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {t.exercises.map((e, j) => (
+                      <Badge key={j} variant="outline" className="text-xs">
+                        {EXERCISE_LABELS[e.exercise as CompoundExercise] || e.exercise} · {e.sets}×{e.reps}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             ))
           )}
         </TabsContent>
@@ -362,75 +326,73 @@ export default function WorkoutsPage() {
         {/* HISTORY TAB */}
         <TabsContent value="history" className="space-y-4">
           {sortedSessions.length === 0 ? (
-            <Card className="border-dashed border-2 border-primary/30 bg-card/50">
+            <Card className="border-dashed border-2 border-primary/20">
               <CardContent className="flex flex-col items-center justify-center py-16">
-                <History className="h-16 w-16 text-primary/40 mb-4 drop-shadow-[0_0_15px_hsl(130,100%,40%,0.4)]" />
-                <p className="text-muted-foreground font-medieval text-lg">No sessions logged yet</p>
+                <History className="h-16 w-16 text-primary/30 mb-4" />
+                <p className="text-muted-foreground text-lg">No sessions logged yet</p>
               </CardContent>
             </Card>
           ) : (
-            sortedSessions.map((session, i) => {
+            sortedSessions.map((session) => {
               const isExpanded = expandedSessions.has(session.id);
               const totalVolume = session.exercises.reduce((sum, ex) => sum + calculateVolumeLoad(ex.sets), 0);
               return (
-                <EmberCard key={session.id} delay={i * 0.05}>
-                  <Card className="border-rough relative overflow-hidden scanlines bg-card/80 crt-hover">
-                    <Collapsible open={isExpanded} onOpenChange={() => toggleSession(session.id)}>
-                      <CollapsibleTrigger asChild>
-                        <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors relative z-10 py-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              {isExpanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medieval font-bold">{new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                                  <Badge variant="outline" className="border-primary/30 font-medieval text-xs capitalize">{session.splitDay}</Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground font-medieval mt-0.5">
-                                  {session.exercises.length} exercise{session.exercises.length !== 1 ? 's' : ''} · {totalVolume.toLocaleString()} lbs volume
-                                </p>
+                <Card key={session.id} className="shadow-sm">
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleSession(session.id)}>
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors py-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">{new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                <Badge variant="outline" className="text-xs capitalize">{session.splitDay}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {session.exercises.length} exercise{session.exercises.length !== 1 ? 's' : ''} · {totalVolume.toLocaleString()} lbs volume
+                              </p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" className="text-destructive h-7" onClick={(e) => { e.stopPropagation(); deleteSession(session.id); toast.success('Session deleted'); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0">
+                        <div className="h-px bg-border mb-3" />
+                        {session.notes && (
+                          <div className="text-xs text-muted-foreground mb-3 p-2 bg-accent/50 rounded-lg border border-border flex items-start gap-1.5">
+                            <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                            {session.notes}
+                          </div>
+                        )}
+                        <div className="space-y-3">
+                          {session.exercises.map((ex, exIdx) => (
+                            <div key={exIdx} className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Dumbbell className="h-3.5 w-3.5 text-primary" />
+                                <span className="font-semibold text-sm">{EXERCISE_LABELS[ex.exercise]}</span>
+                                <span className="text-xs text-muted-foreground ml-auto">{calculateVolumeLoad(ex.sets)} lbs</span>
+                              </div>
+                              <div className="ml-6 space-y-0.5">
+                                {ex.sets.map((set, sIdx) => (
+                                  <div key={sIdx} className="text-xs text-muted-foreground font-mono flex gap-4">
+                                    <span>Set {sIdx + 1}:</span>
+                                    <span>{set.weight} lbs × {set.reps}</span>
+                                    <span className="text-primary/60">RPE {set.rpe}</span>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                            <Button size="sm" variant="ghost" className="text-destructive h-7" onClick={(e) => { e.stopPropagation(); deleteSession(session.id); toast.success('Session deleted'); }}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </CardHeader>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <CardContent className="pt-0 relative z-10">
-                          <div className="divider-alien mb-3" />
-                          {session.notes && (
-                            <div className="text-xs text-muted-foreground font-medieval mb-3 p-2 bg-muted/20 rounded border border-border flex items-start gap-1.5">
-                              <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                              {session.notes}
-                            </div>
-                          )}
-                          <div className="space-y-3">
-                            {session.exercises.map((ex, exIdx) => (
-                              <div key={exIdx} className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <Dumbbell className="h-3.5 w-3.5 text-primary" />
-                                  <span className="font-medieval font-bold text-sm">{EXERCISE_LABELS[ex.exercise]}</span>
-                                  <span className="text-xs text-muted-foreground ml-auto">{calculateVolumeLoad(ex.sets)} lbs</span>
-                                </div>
-                                <div className="ml-6 space-y-0.5">
-                                  {ex.sets.map((set, sIdx) => (
-                                    <div key={sIdx} className="text-xs text-muted-foreground font-mono flex gap-4">
-                                      <span>Set {sIdx + 1}:</span>
-                                      <span>{set.weight} lbs × {set.reps}</span>
-                                      <span className="text-primary/60">RPE {set.rpe}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </Card>
-                </EmberCard>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
               );
             })
           )}
@@ -440,9 +402,9 @@ export default function WorkoutsPage() {
         <TabsContent value="progress" className="space-y-4">
           <div className="flex gap-4 items-end">
             <div>
-              <label className="text-sm text-muted-foreground font-medieval uppercase tracking-wider">Exercise</label>
+              <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Exercise</label>
               <Select value={selectedExercise} onValueChange={(v) => setSelectedExercise(v as CompoundExercise)}>
-                <SelectTrigger className="w-48 mt-1 border-rough"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-48 mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(EXERCISE_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -452,48 +414,48 @@ export default function WorkoutsPage() {
             </div>
           </div>
 
-          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-            <CardHeader className="relative z-10">
-              <CardTitle className="text-sm flex items-center gap-2 font-medieval">
-                <TrendingUp className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(130,100%,40%,0.5)]" /> Weight Progression
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" /> Weight Progression
               </CardTitle>
             </CardHeader>
-            <CardContent className="relative z-10">
+            <CardContent>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(130 20% 15%)" />
-                    <XAxis dataKey="date" stroke="hsl(60 10% 45%)" fontSize={11} />
-                    <YAxis stroke="hsl(60 10% 45%)" fontSize={11} />
-                    <Tooltip contentStyle={{ background: 'hsl(140 18% 7%)', border: '2px solid hsl(130 100% 40% / 0.3)', borderRadius: '4px', fontFamily: 'IBM Plex Mono' }} />
-                    <Line type="monotone" dataKey="weight" stroke="hsl(130 100% 40%)" strokeWidth={3} dot={{ fill: 'hsl(130 100% 40%)', r: 4 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 88%)" />
+                    <XAxis dataKey="date" stroke="hsl(220 10% 45%)" fontSize={11} />
+                    <YAxis stroke="hsl(220 10% 45%)" fontSize={11} />
+                    <Tooltip contentStyle={{ background: 'hsl(0 0% 100%)', border: '1px solid hsl(220 15% 88%)', borderRadius: '8px', fontFamily: 'Inter' }} />
+                    <Line type="monotone" dataKey="weight" stroke="hsl(220 60% 30%)" strokeWidth={3} dot={{ fill: 'hsl(220 60% 30%)', r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-muted-foreground text-center py-8 font-medieval">No data yet. Log your first session!</p>
+                <p className="text-muted-foreground text-center py-8">No data yet. Log your first session!</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-rough relative overflow-hidden scanlines bg-card/80">
-            <CardHeader className="relative z-10">
-              <CardTitle className="text-sm flex items-center gap-2 font-medieval">
-                <TrendingUp className="h-4 w-4 text-secondary drop-shadow-[0_0_6px_hsl(42,100%,50%,0.5)]" /> Weekly Volume
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-coral" /> Weekly Volume
               </CardTitle>
             </CardHeader>
-            <CardContent className="relative z-10">
+            <CardContent>
               {weeklyVolume.length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={weeklyVolume}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(130 20% 15%)" />
-                    <XAxis dataKey="week" stroke="hsl(60 10% 45%)" fontSize={11} />
-                    <YAxis stroke="hsl(60 10% 45%)" fontSize={11} />
-                    <Tooltip contentStyle={{ background: 'hsl(140 18% 7%)', border: '2px solid hsl(42 100% 50% / 0.3)', borderRadius: '4px', fontFamily: 'IBM Plex Mono' }} />
-                    <Bar dataKey="volume" fill="hsl(42 100% 50%)" radius={[2, 2, 0, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 88%)" />
+                    <XAxis dataKey="week" stroke="hsl(220 10% 45%)" fontSize={11} />
+                    <YAxis stroke="hsl(220 10% 45%)" fontSize={11} />
+                    <Tooltip contentStyle={{ background: 'hsl(0 0% 100%)', border: '1px solid hsl(220 15% 88%)', borderRadius: '8px', fontFamily: 'Inter' }} />
+                    <Bar dataKey="volume" fill="hsl(12 80% 65%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-muted-foreground text-center py-8 font-medieval">No data yet</p>
+                <p className="text-muted-foreground text-center py-8">No data yet</p>
               )}
             </CardContent>
           </Card>
@@ -503,23 +465,23 @@ export default function WorkoutsPage() {
         <TabsContent value="prs" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {prs.length > 0 ? prs.map(pr => (
-              <Card key={pr.exercise} className="border-rough glow-gold relative overflow-hidden scanlines bg-card/80">
-                <CardContent className="pt-6 relative z-10">
+              <Card key={pr.exercise} className="shadow-sm border-coral/20">
+                <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <Trophy className="h-8 w-8 text-secondary drop-shadow-[0_0_10px_hsl(42,100%,50%,0.6)]" />
+                    <Trophy className="h-8 w-8 text-coral" />
                     <div>
-                      <p className="font-medieval font-bold text-lg">{EXERCISE_LABELS[pr.exercise]}</p>
-                      <p className="text-3xl font-bold text-secondary glow-gold-text font-gothic">{pr.weight} × {pr.reps}</p>
-                      <p className="text-xs text-muted-foreground font-medieval">Vol: {pr.volumeLoad} lbs · {new Date(pr.date).toLocaleDateString()}</p>
+                      <p className="font-semibold text-lg">{EXERCISE_LABELS[pr.exercise]}</p>
+                      <p className="text-3xl font-bold text-primary">{pr.weight} × {pr.reps}</p>
+                      <p className="text-xs text-muted-foreground">Vol: {pr.volumeLoad} lbs · {new Date(pr.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )) : (
-              <Card className="border-dashed border-2 border-secondary/30 col-span-2 bg-card/50">
+              <Card className="border-dashed border-2 border-coral/20 col-span-2">
                 <CardContent className="flex flex-col items-center justify-center py-16">
-                  <Trophy className="h-16 w-16 text-secondary/40 mb-4 drop-shadow-[0_0_15px_hsl(42,100%,50%,0.4)]" />
-                  <p className="text-muted-foreground font-medieval text-lg">No PRs yet. Start lifting!</p>
+                  <Trophy className="h-16 w-16 text-coral/30 mb-4" />
+                  <p className="text-muted-foreground text-lg">No PRs yet. Start lifting!</p>
                 </CardContent>
               </Card>
             )}
@@ -529,28 +491,28 @@ export default function WorkoutsPage() {
         {/* CONFIG TAB */}
         <TabsContent value="config" className="space-y-4">
           {configs.map(config => (
-            <Card key={config.exercise} className="border-rough relative overflow-hidden scanlines bg-card/80">
-              <CardContent className="pt-6 relative z-10">
+            <Card key={config.exercise} className="shadow-sm">
+              <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medieval font-bold text-lg">{EXERCISE_LABELS[config.exercise]}</h3>
-                  <Badge variant="outline" className="border-primary/30 font-medieval">{config.targetSets} × {config.repRangeMin}-{config.repRangeMax}</Badge>
+                  <h3 className="font-semibold text-lg">{EXERCISE_LABELS[config.exercise]}</h3>
+                  <Badge variant="outline">{config.targetSets} × {config.repRangeMin}-{config.repRangeMax}</Badge>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Weight</label>
-                    <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1 border-rough" />
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Weight</label>
+                    <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Increment</label>
-                    <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1 border-rough" step={2.5} />
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Increment</label>
+                    <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1" step={2.5} />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Rep Min</label>
-                    <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1 border-rough" />
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Min</label>
+                    <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground font-medieval uppercase tracking-wider">Rep Max</label>
-                    <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1 border-rough" />
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Max</label>
+                    <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1" />
                   </div>
                 </div>
               </CardContent>
