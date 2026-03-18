@@ -24,7 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col">
           <header className="h-14 flex items-center border-b border-border px-4 bg-card">
             <SidebarTrigger className="mr-4" />
-            <h1 className="text-xl font-bold text-primary tracking-tight">GoalForge</h1>
+            <h1 className="text-xl font-bold text-primary tracking-tight">TELOS</h1>
           </header>
           <main className="flex-1 overflow-auto p-6">
             {children}

@@ -4,19 +4,19 @@ import { DEFAULT_CONFIGS } from '@/types/workout';
 import { UnlockedAchievement } from '@/lib/achievements';
 
 const KEYS = {
-  GOALS: 'goalforge_goals',
-  SESSIONS: 'goalforge_sessions',
-  EXERCISE_CONFIGS: 'goalforge_exercise_configs',
-  WEEKLY_PLAN: 'goalforge_weekly_plan',
-  SETTINGS: 'goalforge_settings',
-  ACHIEVEMENTS: 'goalforge_achievements',
-  TEMPLATES: 'goalforge_templates',
-  WEEKLY_SCHEDULE: 'goalforge_weekly_schedule',
-  WEEKLY_FOCUS: 'goalforge_weekly_focus',
-  TIME_BLOCKS: 'goalforge_time_blocks',
-  BLOCK_CATEGORIES: 'goalforge_block_categories',
-  REPEATABLE_BLOCKS: 'goalforge_repeatable_blocks',
-  CONTACTS: 'goalforge_contacts',
+  GOALS: 'telos_goals',
+  SESSIONS: 'telos_sessions',
+  EXERCISE_CONFIGS: 'telos_exercise_configs',
+  WEEKLY_PLAN: 'telos_weekly_plan',
+  SETTINGS: 'telos_settings',
+  ACHIEVEMENTS: 'telos_achievements',
+  TEMPLATES: 'telos_templates',
+  WEEKLY_SCHEDULE: 'telos_weekly_schedule',
+  WEEKLY_FOCUS: 'telos_weekly_focus',
+  TIME_BLOCKS: 'telos_time_blocks',
+  BLOCK_CATEGORIES: 'telos_block_categories',
+  REPEATABLE_BLOCKS: 'telos_repeatable_blocks',
+  CONTACTS: 'telos_contacts',
 } as const;
 
 // Repeatable Block Template
