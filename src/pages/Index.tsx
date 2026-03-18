@@ -58,7 +58,7 @@ export default function Index() {
       >
         <div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">{getGreeting()}</h1>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">GoalForge</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TELOS</p>
         </div>
         <Link to="/settings">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
