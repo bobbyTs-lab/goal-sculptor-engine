@@ -46,9 +46,13 @@ export default function Index() {
   ];
 
   return (
-    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6 relative">
-      {/* Decorative circle */}
-      <div className="section-circle circle-coral w-80 h-80 -top-20 -right-20" />
+    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6 relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="section-circle circle-coral w-96 h-96 -top-24 -right-24" />
+      <div className="section-circle circle-coral w-48 h-48 bottom-40 -left-20 opacity-[0.06]" />
+      <div className="circle-ring w-32 h-32 top-20 left-4 text-coral" style={{ color: 'hsl(12 80% 65%)' }} />
+      <div className="circle-ring w-16 h-16 top-60 right-10" style={{ color: 'hsl(12 80% 65%)' }} />
+      <div className="circle-ring-filled w-6 h-6 bottom-60 right-8" style={{ color: 'hsl(12 80% 65%)' }} />
 
       {/* Greeting Bar */}
       <motion.div
