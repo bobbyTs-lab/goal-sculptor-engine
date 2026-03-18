@@ -155,9 +155,12 @@ export default function WorkoutsPage() {
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 relative">
-      {/* Decorative circle */}
-      <div className="section-circle circle-sky w-72 h-72 -top-16 -right-16" />
+    <div className="max-w-5xl mx-auto space-y-6 relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="section-circle circle-sky w-80 h-80 -top-20 -right-20" />
+      <div className="section-circle circle-sky w-44 h-44 bottom-32 -left-16 opacity-[0.06]" />
+      <div className="circle-ring w-24 h-24 top-36 left-6" style={{ color: 'hsl(200 80% 55%)' }} />
+      <div className="circle-ring-filled w-8 h-8 bottom-48 right-12" style={{ color: 'hsl(200 80% 55%)' }} />
 
       <div className="relative z-10">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Workouts</h1>

@@ -323,9 +323,12 @@ RULES:
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 relative">
-      {/* Decorative circle */}
-      <div className="section-circle circle-violet w-72 h-72 -top-16 -left-16" />
+    <div className="max-w-4xl mx-auto space-y-6 relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="section-circle circle-violet w-80 h-80 -top-20 -left-20" />
+      <div className="section-circle circle-violet w-36 h-36 bottom-20 -right-12 opacity-[0.06]" />
+      <div className="circle-ring w-28 h-28 top-40 right-4" style={{ color: 'hsl(270 60% 60%)' }} />
+      <div className="circle-ring-filled w-10 h-10 bottom-40 left-8" style={{ color: 'hsl(270 60% 60%)' }} />
 
       {/* Header */}
       <div className="flex items-center justify-between relative z-10">

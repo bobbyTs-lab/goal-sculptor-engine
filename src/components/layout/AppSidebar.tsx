@@ -34,7 +34,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-lg font-bold text-primary py-4">
-            {!collapsed && <span>GoalForge</span>}
+            {!collapsed && <span>TELOS</span>}
           </SidebarGroupLabel>
           <div className="h-px bg-border mx-2 mb-2" />
           <SidebarGroupContent>
