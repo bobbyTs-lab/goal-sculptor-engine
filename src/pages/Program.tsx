@@ -141,10 +141,12 @@ export default function ProgramPage() {
   const currentPlan = plan[selectedDay];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-4.5rem)] max-w-5xl mx-auto relative">
-      {/* Decorative circle */}
-      <div className="section-circle circle-teal w-64 h-64 -top-10 -right-10" />
-      
+    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-4.5rem)] max-w-5xl mx-auto relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="section-circle circle-teal w-80 h-80 -top-16 -right-16" />
+      <div className="section-circle circle-teal w-40 h-40 bottom-32 -left-16 opacity-[0.06]" />
+      <div className="circle-ring w-24 h-24 top-32 right-8" style={{ color: 'hsl(170 60% 45%)' }} />
+      <div className="circle-ring-filled w-8 h-8 bottom-48 right-16" style={{ color: 'hsl(170 60% 45%)' }} />
       {/* DAY SELECTOR */}
       <div className="flex-shrink-0 pb-3 relative z-10">
         {/* Mobile: big swipeable day header */}

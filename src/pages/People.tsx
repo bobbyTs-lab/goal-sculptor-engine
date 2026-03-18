@@ -98,9 +98,12 @@ export default function PeoplePage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 relative">
-      {/* Decorative circle */}
-      <div className="section-circle circle-amber w-64 h-64 -top-12 -right-12" />
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="section-circle circle-amber w-80 h-80 -top-16 -right-16" />
+      <div className="section-circle circle-amber w-36 h-36 bottom-24 -left-12 opacity-[0.06]" />
+      <div className="circle-ring w-20 h-20 top-28 left-4" style={{ color: 'hsl(38 90% 55%)' }} />
+      <div className="circle-ring-filled w-6 h-6 top-16 right-20" style={{ color: 'hsl(38 90% 55%)' }} />
 
       <div className="flex items-center justify-between gap-3 relative z-10">
         <div className="min-w-0">
