@@ -7,6 +7,7 @@ import { useGoals } from '@/hooks/useGoals';
 import { 
   loadWeeklyPlan, saveWeeklyPlan, generateId,
   loadWeeklySchedule, saveWeeklySchedule, WeeklySchedule,
+  loadContacts, Contact,
 } from '@/lib/storage';
 import { 
   Calendar, Dumbbell, X, Settings2, ChevronLeft, ChevronRight, Repeat
@@ -67,6 +68,7 @@ export default function ProgramPage() {
     return DAYS.map(day => ({ day, splitDay: 'rest' as SplitDay, exercises: [] }));
   });
   const [schedule, setSchedule] = useState<WeeklySchedule>(() => loadWeeklySchedule());
+  const [contacts] = useState<Contact[]>(() => loadContacts());
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const [showSettings, setShowSettings] = useState(false);
@@ -323,6 +325,7 @@ export default function ProgramPage() {
       <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <DailyTimeBlocks
           dayName={DAYS[selectedDay]}
+          contacts={contacts}
           onToggleTodo={(todoId) => {
             const todo = allTodos.find(t => t.todoId === todoId);
             if (todo) handleToggleTodo(todo);

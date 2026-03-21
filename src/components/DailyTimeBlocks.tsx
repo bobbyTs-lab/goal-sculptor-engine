@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId, loadRepeatableBlocks, RepeatableBlock } from '@/lib/storage';
+import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId, loadRepeatableBlocks, RepeatableBlock, Contact } from '@/lib/storage';
 import { shouldShowOnDay } from '@/components/RepeatableBlockManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat, Target } from 'lucide-react';
+import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat, Target, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -133,9 +133,10 @@ interface DailyTimeBlocksProps {
   dayName: string;
   onToggleTodo?: (todoId: string) => void;
   backlogTodos?: BacklogTodo[];
+  contacts?: Contact[];
 }
 
-export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [] }: DailyTimeBlocksProps) {
+export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [], contacts = [] }: DailyTimeBlocksProps) {
   const [blocks, setBlocks] = useState<TimeBlock[]>(() => loadTimeBlocks());
   const [categories, setCategories] = useState<BlockCategory[]>(() => loadBlockCategories());
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
@@ -230,6 +231,18 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
 
   const unlinkTodo = useCallback((blockId: string) => {
     updateBlock(blockId, { todoId: undefined, title: '' });
+  }, [updateBlock]);
+
+  const linkContact = useCallback((blockId: string, contactId: string, contactName: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    const currentTitle = block?.title || '';
+    const newTitle = currentTitle ? `${currentTitle} w/ ${contactName}` : `w/ ${contactName}`;
+    updateBlock(blockId, { contactId, title: newTitle });
+    toast.success(`Linked ${contactName}`);
+  }, [blocks, updateBlock]);
+
+  const unlinkContact = useCallback((blockId: string) => {
+    updateBlock(blockId, { contactId: undefined });
   }, [updateBlock]);
 
   const addCategory = useCallback(() => {
@@ -499,6 +512,17 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                     )}
                   </div>
 
+                  {/* Contact badge */}
+                  {block.contactId && (() => {
+                    const contact = contacts.find(c => c.id === block.contactId);
+                    return contact ? (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <User className="h-2.5 w-2.5 text-amber" />
+                        <span className="text-[9px] font-medium text-amber truncate">{contact.name}</span>
+                      </div>
+                    ) : null;
+                  })()}
+
                   {/* Time label */}
                   {height >= 30 && (
                     <span className="text-[9px] font-medieval text-muted-foreground mt-auto">
@@ -527,6 +551,18 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                       {block.todoId && (
                         <button onClick={() => unlinkTodo(block.id)} className="p-0.5 rounded bg-background/80 border border-border/30 hover:bg-muted/50" title="Unlink todo">
                           <Unlink className="h-3 w-3" />
+                        </button>
+                      )}
+                      {/* Link contact */}
+                      {!block.contactId && contacts.length > 0 && (
+                        <ContactLinkPicker
+                          contacts={contacts}
+                          onLink={(contactId, name) => linkContact(block.id, contactId, name)}
+                        />
+                      )}
+                      {block.contactId && (
+                        <button onClick={() => unlinkContact(block.id)} className="p-0.5 rounded bg-amber/20 border border-amber/30 hover:bg-amber/40" title="Unlink contact">
+                          <User className="h-3 w-3 text-amber" />
                         </button>
                       )}
                       <button onClick={() => deleteBlock(block.id)} className="p-0.5 rounded bg-destructive/20 border border-destructive/30 hover:bg-destructive/40">
@@ -647,6 +683,63 @@ function TodoLinkPicker({ backlogTodos, onLink }: {
                 </div>
               );
             })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/* ─── Contact Link Picker ─── */
+function ContactLinkPicker({ contacts, onLink }: {
+  contacts: Contact[];
+  onLink: (contactId: string, name: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+
+  const filtered = search
+    ? contacts.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.relationship.toLowerCase().includes(search.toLowerCase())
+      )
+    : contacts;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="p-0.5 rounded bg-amber/10 border border-amber/30 hover:bg-amber/20" title="Link a contact">
+          <User className="h-3 w-3 text-amber" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="end">
+        <div className="p-2 border-b border-border/30">
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search contacts..."
+            className="h-7 text-xs"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-48 overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground p-2 text-center">No contacts found</p>
+          ) : (
+            filtered.map(c => (
+              <button
+                key={c.id}
+                onClick={() => onLink(c.id, c.name)}
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-left rounded hover:bg-amber/10 transition-colors"
+              >
+                <div className="w-5 h-5 rounded-full bg-amber/15 flex items-center justify-center text-[10px] font-semibold text-amber flex-shrink-0">
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-medium truncate block">{c.name}</span>
+                  <span className="text-[9px] text-muted-foreground capitalize">{c.relationship}</span>
+                </div>
+              </button>
+            ))
           )}
         </div>
       </PopoverContent>
