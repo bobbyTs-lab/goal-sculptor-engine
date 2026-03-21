@@ -634,6 +634,34 @@ RULES:
         </DialogContent>
       </Dialog>
 
+      {/* Add Habit Dialog */}
+      <Dialog open={!!addHabitTarget} onOpenChange={() => setAddHabitTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Repeat className="h-5 w-5 text-amber" /> Add Habit
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Habit</label>
+              <Input placeholder="e.g., Eat 200g protein" value={newHabit.title} onChange={e => setNewHabit({ ...newHabit, title: e.target.value })} className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Frequency</label>
+                <Input placeholder="e.g., daily, 3x/week" value={newHabit.frequency} onChange={e => setNewHabit({ ...newHabit, frequency: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Target (optional)</label>
+                <Input placeholder="e.g., 200g, 30 min" value={newHabit.target} onChange={e => setNewHabit({ ...newHabit, target: e.target.value })} className="mt-1" />
+              </div>
+            </div>
+            <Button onClick={handleAddHabit} className="w-full font-semibold">Add Habit</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* AI Prompt Dialog */}
       <Dialog open={!!promptGoal} onOpenChange={(open) => { if (!open) { setPromptGoal(null); setParsedResult(null); setAiResponseText(''); setPromptTab('prompt'); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
