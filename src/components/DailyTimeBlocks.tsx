@@ -512,6 +512,17 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                     )}
                   </div>
 
+                  {/* Contact badge */}
+                  {block.contactId && (() => {
+                    const contact = contacts.find(c => c.id === block.contactId);
+                    return contact ? (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <User className="h-2.5 w-2.5 text-amber" />
+                        <span className="text-[9px] font-medium text-amber truncate">{contact.name}</span>
+                      </div>
+                    ) : null;
+                  })()}
+
                   {/* Time label */}
                   {height >= 30 && (
                     <span className="text-[9px] font-medieval text-muted-foreground mt-auto">
