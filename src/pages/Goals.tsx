@@ -16,8 +16,9 @@ import { toast } from 'sonner';
 import { ProgressRing } from '@/components/ProgressRing';
 
 // --- Parser types ---
+interface ParsedHabit { title: string; frequency: string; target: string; }
 interface ParsedTodo { title: string; deadline: string; }
-interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; }
+interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; habits: ParsedHabit[]; }
 interface ParsedPhase { title: string; description: string; deadline: string; tasks: ParsedTask[]; }
 interface ParseResult { phases: ParsedPhase[]; warnings: string[]; }
 
@@ -44,7 +45,7 @@ function parseAIResponse(text: string): ParseResult {
     const taskMatch = trimmed.match(/^TASK:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
     if (taskMatch) {
       if (!currentPhase) { warnings.push(`Line ${i + 1}: TASK found before any PHASE, skipped`); continue; }
-      currentTask = { title: taskMatch[1].trim(), description: taskMatch[2].trim(), deadline: taskMatch[3], todos: [] };
+      currentTask = { title: taskMatch[1].trim(), description: taskMatch[2].trim(), deadline: taskMatch[3], todos: [], habits: [] };
       currentPhase.tasks.push(currentTask);
       continue;
     }
@@ -53,6 +54,13 @@ function parseAIResponse(text: string): ParseResult {
     if (todoMatch) {
       if (!currentTask) { warnings.push(`Line ${i + 1}: TODO found before any TASK, skipped`); continue; }
       currentTask.todos.push({ title: todoMatch[1].trim(), deadline: todoMatch[2] });
+      continue;
+    }
+
+    const habitMatch = trimmed.match(/^HABIT:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*$/);
+    if (habitMatch) {
+      if (!currentTask) { warnings.push(`Line ${i + 1}: HABIT found before any TASK, skipped`); continue; }
+      currentTask.habits.push({ title: habitMatch[1].trim(), frequency: habitMatch[2].trim(), target: habitMatch[3].trim() });
       continue;
     }
   }
