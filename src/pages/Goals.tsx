@@ -741,6 +741,14 @@ RULES:
                                 <span className="text-xs text-muted-foreground/60">{todo.deadline}</span>
                               </div>
                             ))}
+                            {(task.habits || []).map((habit, hi) => (
+                              <div key={`h${hi}`} className="ml-4 flex items-center gap-2">
+                                <Repeat className="h-3 w-3 text-amber" />
+                                <span className="text-xs text-amber">{habit.title}</span>
+                                <span className="text-xs text-muted-foreground">{habit.frequency}</span>
+                                {habit.target && <span className="text-xs text-muted-foreground/60">{habit.target}</span>}
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
@@ -751,7 +759,7 @@ RULES:
                 {parsedResult && parsedResult.phases.length > 0 && (
                   <Button onClick={handleBulkImport} className="w-full font-semibold">
                     <Upload className="h-4 w-4 mr-2" />
-                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos
+                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0)} habits
                   </Button>
                 )}
               </TabsContent>
