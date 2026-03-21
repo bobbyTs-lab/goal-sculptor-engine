@@ -542,6 +542,18 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                           <Unlink className="h-3 w-3" />
                         </button>
                       )}
+                      {/* Link contact */}
+                      {!block.contactId && contacts.length > 0 && (
+                        <ContactLinkPicker
+                          contacts={contacts}
+                          onLink={(contactId, name) => linkContact(block.id, contactId, name)}
+                        />
+                      )}
+                      {block.contactId && (
+                        <button onClick={() => unlinkContact(block.id)} className="p-0.5 rounded bg-amber/20 border border-amber/30 hover:bg-amber/40" title="Unlink contact">
+                          <User className="h-3 w-3 text-amber" />
+                        </button>
+                      )}
                       <button onClick={() => deleteBlock(block.id)} className="p-0.5 rounded bg-destructive/20 border border-destructive/30 hover:bg-destructive/40">
                         <Trash2 className="h-3 w-3 text-destructive" />
                       </button>
