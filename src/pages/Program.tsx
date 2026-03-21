@@ -7,6 +7,7 @@ import { useGoals } from '@/hooks/useGoals';
 import { 
   loadWeeklyPlan, saveWeeklyPlan, generateId,
   loadWeeklySchedule, saveWeeklySchedule, WeeklySchedule,
+  loadContacts, Contact,
 } from '@/lib/storage';
 import { 
   Calendar, Dumbbell, X, Settings2, ChevronLeft, ChevronRight, Repeat

@@ -689,3 +689,60 @@ function TodoLinkPicker({ backlogTodos, onLink }: {
     </Popover>
   );
 }
+
+/* ─── Contact Link Picker ─── */
+function ContactLinkPicker({ contacts, onLink }: {
+  contacts: Contact[];
+  onLink: (contactId: string, name: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+
+  const filtered = search
+    ? contacts.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.relationship.toLowerCase().includes(search.toLowerCase())
+      )
+    : contacts;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="p-0.5 rounded bg-amber/10 border border-amber/30 hover:bg-amber/20" title="Link a contact">
+          <User className="h-3 w-3 text-amber" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="end">
+        <div className="p-2 border-b border-border/30">
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search contacts..."
+            className="h-7 text-xs"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-48 overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground p-2 text-center">No contacts found</p>
+          ) : (
+            filtered.map(c => (
+              <button
+                key={c.id}
+                onClick={() => onLink(c.id, c.name)}
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-left rounded hover:bg-amber/10 transition-colors"
+              >
+                <div className="w-5 h-5 rounded-full bg-amber/15 flex items-center justify-center text-[10px] font-semibold text-amber flex-shrink-0">
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-medium truncate block">{c.name}</span>
+                  <span className="text-[9px] text-muted-foreground capitalize">{c.relationship}</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
