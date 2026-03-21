@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Goal, Phase, Task, ToDo } from '@/types/goals';
+import { Goal, Phase, Task, ToDo, Habit } from '@/types/goals';
 import { loadGoals, saveGoals, generateId } from '@/lib/storage';
 
 export function useGoals() {
