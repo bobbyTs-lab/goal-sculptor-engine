@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle, Repeat, ToggleLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProgressRing } from '@/components/ProgressRing';
 
@@ -102,6 +102,7 @@ export default function GoalsPage() {
     addPhase, deletePhase,
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
+    addHabit, toggleHabit, deleteHabit,
   } = useGoals();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
@@ -117,6 +118,8 @@ export default function GoalsPage() {
   const [addTodoTarget, setAddTodoTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDeadline, setNewTodoDeadline] = useState('');
+  const [addHabitTarget, setAddHabitTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
+  const [newHabit, setNewHabit] = useState({ title: '', frequency: 'daily', target: '' });
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
   const [aiResponseText, setAiResponseText] = useState('');
   const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
