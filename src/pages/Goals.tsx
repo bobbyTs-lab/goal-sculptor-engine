@@ -299,10 +299,18 @@ RULES:
           order: tdi,
           deadline: ptd.deadline,
         })),
+        habits: (pt.habits || []).map(ph => ({
+          id: generateId(),
+          title: ph.title,
+          frequency: ph.frequency,
+          target: ph.target,
+          active: true,
+        })),
       }));
 
       totalTasks += tasks.length;
       totalTodos += tasks.reduce((sum, t) => sum + t.todos.length, 0);
+      let totalHabits = tasks.reduce((sum, t) => sum + t.habits.length, 0);
 
       if (existingIdx >= 0) {
         const existing = updatedPhases[existingIdx];
@@ -324,7 +332,8 @@ RULES:
     }
 
     updateGoal(promptGoal.id, { phases: updatedPhases });
-    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos!`);
+    const totalHabitsAll = parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0);
+    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos, ${totalHabitsAll} habits!`);
     setParsedResult(null);
     setAiResponseText('');
     setPromptGoal(null);
