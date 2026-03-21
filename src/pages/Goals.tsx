@@ -162,6 +162,14 @@ export default function GoalsPage() {
     setAddTodoTarget(null);
   };
 
+  const handleAddHabit = () => {
+    if (!addHabitTarget || !newHabit.title.trim()) return;
+    addHabit(addHabitTarget.goalId, addHabitTarget.phaseId, addHabitTarget.taskId, newHabit.title, newHabit.frequency, newHabit.target || undefined);
+    setNewHabit({ title: '', frequency: 'daily', target: '' });
+    setAddHabitTarget(null);
+    toast.success('Habit added!');
+  };
+
   const generateAIPrompt = (goal: Goal) => {
     const phaseList = goal.phases.map((p, i) => `  - Phase ${i + 1}: "${p.title}" — ${p.description}${p.deadline ? ` (deadline: ${p.deadline})` : ''}`).join('\n');
     const today = new Date().toISOString().split('T')[0];
