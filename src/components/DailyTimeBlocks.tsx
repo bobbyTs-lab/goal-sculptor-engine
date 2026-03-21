@@ -233,6 +233,18 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
     updateBlock(blockId, { todoId: undefined, title: '' });
   }, [updateBlock]);
 
+  const linkContact = useCallback((blockId: string, contactId: string, contactName: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    const currentTitle = block?.title || '';
+    const newTitle = currentTitle ? `${currentTitle} w/ ${contactName}` : `w/ ${contactName}`;
+    updateBlock(blockId, { contactId, title: newTitle });
+    toast.success(`Linked ${contactName}`);
+  }, [blocks, updateBlock]);
+
+  const unlinkContact = useCallback((blockId: string) => {
+    updateBlock(blockId, { contactId: undefined });
+  }, [updateBlock]);
+
   const addCategory = useCallback(() => {
     if (!newCatName.trim()) return;
     const cat: BlockCategory = { id: generateId(), name: newCatName.trim(), color: newCatColor };
