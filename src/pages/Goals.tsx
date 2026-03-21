@@ -514,8 +514,11 @@ RULES:
                                             <DeadlineBadge deadline={task.deadline} />
                                           </div>
                                           <div className="flex gap-1">
-                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Add to-do" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
                                               <Plus className="h-3 w-3" />
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Add habit" onClick={(e) => { e.stopPropagation(); setAddHabitTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
+                                              <Repeat className="h-3 w-3 text-amber" />
                                             </Button>
                                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); deleteTask(goal.id, phase.id, task.id); }}>
                                               <Trash2 className="h-3 w-3" />
@@ -525,6 +528,7 @@ RULES:
                                       </CollapsibleTrigger>
                                       <CollapsibleContent>
                                         <div className="ml-5 mt-1 space-y-1">
+                                          {/* To-Dos */}
                                           {task.todos.map(todo => (
                                             <div key={todo.id} className="flex items-center gap-2 group">
                                               <Checkbox
@@ -540,6 +544,26 @@ RULES:
                                           ))}
                                           {task.todos.length === 0 && (
                                             <p className="text-xs text-muted-foreground italic">No to-dos yet</p>
+                                          )}
+
+                                          {/* Habits */}
+                                          {(task.habits || []).length > 0 && (
+                                            <div className="mt-2 pt-2 border-t border-border/50">
+                                              <p className="text-[10px] text-amber uppercase tracking-widest font-semibold mb-1 flex items-center gap-1">
+                                                <Repeat className="h-3 w-3" /> Habits & Regimens
+                                              </p>
+                                              {(task.habits || []).map(habit => (
+                                                <div key={habit.id} className="flex items-center gap-2 group py-0.5">
+                                                  <ToggleLeft className={`h-3.5 w-3.5 flex-shrink-0 cursor-pointer ${habit.active ? 'text-amber' : 'text-muted-foreground'}`} onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)} />
+                                                  <span className={`text-sm ${!habit.active ? 'line-through text-muted-foreground' : ''}`}>{habit.title}</span>
+                                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber/10 border-amber/30 text-amber">{habit.frequency}</Badge>
+                                                  {habit.target && <span className="text-[10px] text-muted-foreground">{habit.target}</span>}
+                                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                    <Trash2 className="h-3 w-3" />
+                                                  </Button>
+                                                </div>
+                                              ))}
+                                            </div>
                                           )}
                                         </div>
                                       </CollapsibleContent>
