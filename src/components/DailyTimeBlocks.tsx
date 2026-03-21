@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId, loadRepeatableBlocks, RepeatableBlock } from '@/lib/storage';
+import { TimeBlock, BlockCategory, DEFAULT_CATEGORIES, loadBlockCategories, saveBlockCategories, loadTimeBlocks, saveTimeBlocks, generateId, loadRepeatableBlocks, RepeatableBlock, Contact } from '@/lib/storage';
 import { shouldShowOnDay } from '@/components/RepeatableBlockManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat, Target } from 'lucide-react';
+import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat, Target, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -133,9 +133,10 @@ interface DailyTimeBlocksProps {
   dayName: string;
   onToggleTodo?: (todoId: string) => void;
   backlogTodos?: BacklogTodo[];
+  contacts?: Contact[];
 }
 
-export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [] }: DailyTimeBlocksProps) {
+export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [], contacts = [] }: DailyTimeBlocksProps) {
   const [blocks, setBlocks] = useState<TimeBlock[]>(() => loadTimeBlocks());
   const [categories, setCategories] = useState<BlockCategory[]>(() => loadBlockCategories());
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
