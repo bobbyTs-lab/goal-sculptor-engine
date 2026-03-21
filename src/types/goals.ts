@@ -8,12 +8,21 @@ export interface ToDo {
   deadline?: string;
 }
 
+export interface Habit {
+  id: string;
+  title: string;
+  frequency: string; // "daily", "3x/week", "weekdays", etc.
+  target?: string; // "200g protein", "30 minutes", etc.
+  active: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
   description: string;
   status: Status;
   todos: ToDo[];
+  habits: Habit[];
   order: number;
   deadline?: string;
 }

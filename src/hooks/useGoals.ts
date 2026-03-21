@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Goal, Phase, Task, ToDo } from '@/types/goals';
+import { Goal, Phase, Task, ToDo, Habit } from '@/types/goals';
 import { loadGoals, saveGoals, generateId } from '@/lib/storage';
 
 export function useGoals() {
@@ -66,9 +66,72 @@ export function useGoals() {
           if (p.id !== phaseId) return p;
           const task: Task = {
             id: generateId(), title, description, status: 'not_started',
-            todos: [], order: p.tasks.length, deadline,
+            todos: [], habits: [], order: p.tasks.length, deadline,
           };
           return { ...p, tasks: [...p.tasks, task] };
+        }),
+      };
+    }));
+  }, [goals, persist]);
+
+  const addHabit = useCallback((goalId: string, phaseId: string, taskId: string, title: string, frequency: string, target?: string) => {
+    persist(goals.map(g => {
+      if (g.id !== goalId) return g;
+      return {
+        ...g,
+        phases: g.phases.map(p => {
+          if (p.id !== phaseId) return p;
+          return {
+            ...p,
+            tasks: p.tasks.map(t => {
+              if (t.id !== taskId) return t;
+              const habit: Habit = { id: generateId(), title, frequency, target, active: true };
+              return { ...t, habits: [...(t.habits || []), habit] };
+            }),
+          };
+        }),
+      };
+    }));
+  }, [goals, persist]);
+
+  const toggleHabit = useCallback((goalId: string, phaseId: string, taskId: string, habitId: string) => {
+    persist(goals.map(g => {
+      if (g.id !== goalId) return g;
+      return {
+        ...g,
+        phases: g.phases.map(p => {
+          if (p.id !== phaseId) return p;
+          return {
+            ...p,
+            tasks: p.tasks.map(t => {
+              if (t.id !== taskId) return t;
+              return {
+                ...t,
+                habits: (t.habits || []).map(h =>
+                  h.id === habitId ? { ...h, active: !h.active } : h
+                ),
+              };
+            }),
+          };
+        }),
+      };
+    }));
+  }, [goals, persist]);
+
+  const deleteHabit = useCallback((goalId: string, phaseId: string, taskId: string, habitId: string) => {
+    persist(goals.map(g => {
+      if (g.id !== goalId) return g;
+      return {
+        ...g,
+        phases: g.phases.map(p => {
+          if (p.id !== phaseId) return p;
+          return {
+            ...p,
+            tasks: p.tasks.map(t => {
+              if (t.id !== taskId) return t;
+              return { ...t, habits: (t.habits || []).filter(h => h.id !== habitId) };
+            }),
+          };
         }),
       };
     }));
@@ -162,5 +225,6 @@ export function useGoals() {
     addPhase, deletePhase,
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
+    addHabit, toggleHabit, deleteHabit,
   };
 }

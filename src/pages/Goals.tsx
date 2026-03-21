@@ -11,13 +11,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle, Repeat, ToggleLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProgressRing } from '@/components/ProgressRing';
 
 // --- Parser types ---
+interface ParsedHabit { title: string; frequency: string; target: string; }
 interface ParsedTodo { title: string; deadline: string; }
-interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; }
+interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; habits: ParsedHabit[]; }
 interface ParsedPhase { title: string; description: string; deadline: string; tasks: ParsedTask[]; }
 interface ParseResult { phases: ParsedPhase[]; warnings: string[]; }
 
@@ -44,7 +45,7 @@ function parseAIResponse(text: string): ParseResult {
     const taskMatch = trimmed.match(/^TASK:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
     if (taskMatch) {
       if (!currentPhase) { warnings.push(`Line ${i + 1}: TASK found before any PHASE, skipped`); continue; }
-      currentTask = { title: taskMatch[1].trim(), description: taskMatch[2].trim(), deadline: taskMatch[3], todos: [] };
+      currentTask = { title: taskMatch[1].trim(), description: taskMatch[2].trim(), deadline: taskMatch[3], todos: [], habits: [] };
       currentPhase.tasks.push(currentTask);
       continue;
     }
@@ -53,6 +54,13 @@ function parseAIResponse(text: string): ParseResult {
     if (todoMatch) {
       if (!currentTask) { warnings.push(`Line ${i + 1}: TODO found before any TASK, skipped`); continue; }
       currentTask.todos.push({ title: todoMatch[1].trim(), deadline: todoMatch[2] });
+      continue;
+    }
+
+    const habitMatch = trimmed.match(/^HABIT:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*$/);
+    if (habitMatch) {
+      if (!currentTask) { warnings.push(`Line ${i + 1}: HABIT found before any TASK, skipped`); continue; }
+      currentTask.habits.push({ title: habitMatch[1].trim(), frequency: habitMatch[2].trim(), target: habitMatch[3].trim() });
       continue;
     }
   }
@@ -94,6 +102,7 @@ export default function GoalsPage() {
     addPhase, deletePhase,
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
+    addHabit, toggleHabit, deleteHabit,
   } = useGoals();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
@@ -109,6 +118,8 @@ export default function GoalsPage() {
   const [addTodoTarget, setAddTodoTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDeadline, setNewTodoDeadline] = useState('');
+  const [addHabitTarget, setAddHabitTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
+  const [newHabit, setNewHabit] = useState({ title: '', frequency: 'daily', target: '' });
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
   const [aiResponseText, setAiResponseText] = useState('');
   const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
@@ -149,6 +160,14 @@ export default function GoalsPage() {
     setNewTodoTitle('');
     setNewTodoDeadline('');
     setAddTodoTarget(null);
+  };
+
+  const handleAddHabit = () => {
+    if (!addHabitTarget || !newHabit.title.trim()) return;
+    addHabit(addHabitTarget.goalId, addHabitTarget.phaseId, addHabitTarget.taskId, newHabit.title, newHabit.frequency, newHabit.target || undefined);
+    setNewHabit({ title: '', frequency: 'daily', target: '' });
+    setAddHabitTarget(null);
+    toast.success('Habit added!');
   };
 
   const generateAIPrompt = (goal: Goal) => {
@@ -215,24 +234,37 @@ Good: "Record video of 3 attempts", "Watch 2 instructional videos", "Write summa
 Bad: "Practice daily", "Train for a month", "Improve strength"
 If a TODO is larger than a single session, break it into smaller TODOs.
 
+HABIT RULES — HABIT items represent ongoing routines, regimens, or recurring practices tied to a task:
+- Must be specific, measurable recurring actions
+- Include a clear frequency (daily, 3x/week, weekdays, etc.)
+- Include a clear target or metric (200g protein, 30 minutes, 5 sets, etc.)
+- Habits evolve task-by-task — they can be introduced, modified, or intensified as the plan progresses
+- Each task should include habits that are appropriate for that stage of development
+Good: "Eat 200g protein | daily | 200g minimum", "Practice chord transitions | daily | 30 minutes", "Mobility stretching | daily | 15 minutes"
+Bad: "Be healthy", "Practice more", "Eat well"
+
 TASK RULES — Tasks must:
 - Represent measurable capability milestones
 - Include numbers or clear success criteria
 - Represent meaningful progress toward the goal
+- Include both one-off TODOs (actionable steps) AND ongoing HABITs (regimens to maintain)
 Good: "Land first assisted backflip", "Hold a 2-minute plank"
 Bad: "Improve technique", "Work on strength"
 
 TIME RULES:
-- Every item MUST have a deadline in YYYY-MM-DD format.
-- Phase deadlines divide the total timeline (${today} to ${deadline}) roughly evenly.
+- Every TODO item MUST have a deadline in YYYY-MM-DD format.
+- Phase deadlines divide the total timeline (\${today} to \${deadline}) roughly evenly.
 - Task deadlines fall within their phase.
 - Todo deadlines fall within their task.
 - Deadlines should progress logically and steadily.
+- HABIT items do NOT have deadlines — they are ongoing.
 
 PLAN QUALITY — Before producing the final plan, internally verify that:
 - Progression makes logical sense
 - Tasks represent real milestones
 - Todos are atomic single-session actions
+- Habits are specific, measurable recurring actions
+- Habits evolve appropriately across tasks (e.g., protein target increases, practice duration grows)
 - No vague wording is used
 - Nothing requires multiple sessions
 
@@ -242,14 +274,18 @@ PHASE: Phase Title | Phase description | YYYY-MM-DD
   TASK: Task Title | Task description | YYYY-MM-DD
     TODO: Todo item title | YYYY-MM-DD
     TODO: Another todo item | YYYY-MM-DD
+    HABIT: Habit title | frequency | target
+    HABIT: Another habit | daily | 30 minutes
   TASK: Another Task | Description here | YYYY-MM-DD
     TODO: Sub-item | YYYY-MM-DD
+    HABIT: Evolved habit | daily | 45 minutes
 
 RULES:
-- Lines must start with PHASE:, TASK:, or TODO:
+- Lines must start with PHASE:, TASK:, TODO:, or HABIT:
 - Maintain indentation
 - Use | (pipe) to separate fields
-- Dates MUST be YYYY-MM-DD
+- TODO dates MUST be YYYY-MM-DD
+- HABIT lines have 3 fields: title | frequency | target
 - Do NOT add explanations or commentary
 - Output ONLY the plan`;
   };
@@ -291,10 +327,18 @@ RULES:
           order: tdi,
           deadline: ptd.deadline,
         })),
+        habits: (pt.habits || []).map(ph => ({
+          id: generateId(),
+          title: ph.title,
+          frequency: ph.frequency,
+          target: ph.target,
+          active: true,
+        })),
       }));
 
       totalTasks += tasks.length;
       totalTodos += tasks.reduce((sum, t) => sum + t.todos.length, 0);
+      let totalHabits = tasks.reduce((sum, t) => sum + t.habits.length, 0);
 
       if (existingIdx >= 0) {
         const existing = updatedPhases[existingIdx];
@@ -316,7 +360,8 @@ RULES:
     }
 
     updateGoal(promptGoal.id, { phases: updatedPhases });
-    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos!`);
+    const totalHabitsAll = parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0);
+    toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos, ${totalHabitsAll} habits!`);
     setParsedResult(null);
     setAiResponseText('');
     setPromptGoal(null);
@@ -469,8 +514,11 @@ RULES:
                                             <DeadlineBadge deadline={task.deadline} />
                                           </div>
                                           <div className="flex gap-1">
-                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Add to-do" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
                                               <Plus className="h-3 w-3" />
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Add habit" onClick={(e) => { e.stopPropagation(); setAddHabitTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
+                                              <Repeat className="h-3 w-3 text-amber" />
                                             </Button>
                                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); deleteTask(goal.id, phase.id, task.id); }}>
                                               <Trash2 className="h-3 w-3" />
@@ -480,6 +528,7 @@ RULES:
                                       </CollapsibleTrigger>
                                       <CollapsibleContent>
                                         <div className="ml-5 mt-1 space-y-1">
+                                          {/* To-Dos */}
                                           {task.todos.map(todo => (
                                             <div key={todo.id} className="flex items-center gap-2 group">
                                               <Checkbox
@@ -495,6 +544,26 @@ RULES:
                                           ))}
                                           {task.todos.length === 0 && (
                                             <p className="text-xs text-muted-foreground italic">No to-dos yet</p>
+                                          )}
+
+                                          {/* Habits */}
+                                          {(task.habits || []).length > 0 && (
+                                            <div className="mt-2 pt-2 border-t border-border/50">
+                                              <p className="text-[10px] text-amber uppercase tracking-widest font-semibold mb-1 flex items-center gap-1">
+                                                <Repeat className="h-3 w-3" /> Habits & Regimens
+                                              </p>
+                                              {(task.habits || []).map(habit => (
+                                                <div key={habit.id} className="flex items-center gap-2 group py-0.5">
+                                                  <ToggleLeft className={`h-3.5 w-3.5 flex-shrink-0 cursor-pointer ${habit.active ? 'text-amber' : 'text-muted-foreground'}`} onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)} />
+                                                  <span className={`text-sm ${!habit.active ? 'line-through text-muted-foreground' : ''}`}>{habit.title}</span>
+                                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber/10 border-amber/30 text-amber">{habit.frequency}</Badge>
+                                                  {habit.target && <span className="text-[10px] text-muted-foreground">{habit.target}</span>}
+                                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                    <Trash2 className="h-3 w-3" />
+                                                  </Button>
+                                                </div>
+                                              ))}
+                                            </div>
                                           )}
                                         </div>
                                       </CollapsibleContent>
@@ -561,6 +630,34 @@ RULES:
               <Input type="date" value={newTodoDeadline} onChange={e => setNewTodoDeadline(e.target.value)} className="mt-1" />
             </div>
             <Button onClick={handleAddTodo} className="w-full font-semibold">Add To-Do</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Habit Dialog */}
+      <Dialog open={!!addHabitTarget} onOpenChange={() => setAddHabitTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Repeat className="h-5 w-5 text-amber" /> Add Habit
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Habit</label>
+              <Input placeholder="e.g., Eat 200g protein" value={newHabit.title} onChange={e => setNewHabit({ ...newHabit, title: e.target.value })} className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Frequency</label>
+                <Input placeholder="e.g., daily, 3x/week" value={newHabit.frequency} onChange={e => setNewHabit({ ...newHabit, frequency: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Target (optional)</label>
+                <Input placeholder="e.g., 200g, 30 min" value={newHabit.target} onChange={e => setNewHabit({ ...newHabit, target: e.target.value })} className="mt-1" />
+              </div>
+            </div>
+            <Button onClick={handleAddHabit} className="w-full font-semibold">Add Habit</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -644,6 +741,14 @@ RULES:
                                 <span className="text-xs text-muted-foreground/60">{todo.deadline}</span>
                               </div>
                             ))}
+                            {(task.habits || []).map((habit, hi) => (
+                              <div key={`h${hi}`} className="ml-4 flex items-center gap-2">
+                                <Repeat className="h-3 w-3 text-amber" />
+                                <span className="text-xs text-amber">{habit.title}</span>
+                                <span className="text-xs text-muted-foreground">{habit.frequency}</span>
+                                {habit.target && <span className="text-xs text-muted-foreground/60">{habit.target}</span>}
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
@@ -654,7 +759,7 @@ RULES:
                 {parsedResult && parsedResult.phases.length > 0 && (
                   <Button onClick={handleBulkImport} className="w-full font-semibold">
                     <Upload className="h-4 w-4 mr-2" />
-                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos
+                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0)} habits
                   </Button>
                 )}
               </TabsContent>
