@@ -234,24 +234,37 @@ Good: "Record video of 3 attempts", "Watch 2 instructional videos", "Write summa
 Bad: "Practice daily", "Train for a month", "Improve strength"
 If a TODO is larger than a single session, break it into smaller TODOs.
 
+HABIT RULES — HABIT items represent ongoing routines, regimens, or recurring practices tied to a task:
+- Must be specific, measurable recurring actions
+- Include a clear frequency (daily, 3x/week, weekdays, etc.)
+- Include a clear target or metric (200g protein, 30 minutes, 5 sets, etc.)
+- Habits evolve task-by-task — they can be introduced, modified, or intensified as the plan progresses
+- Each task should include habits that are appropriate for that stage of development
+Good: "Eat 200g protein | daily | 200g minimum", "Practice chord transitions | daily | 30 minutes", "Mobility stretching | daily | 15 minutes"
+Bad: "Be healthy", "Practice more", "Eat well"
+
 TASK RULES — Tasks must:
 - Represent measurable capability milestones
 - Include numbers or clear success criteria
 - Represent meaningful progress toward the goal
+- Include both one-off TODOs (actionable steps) AND ongoing HABITs (regimens to maintain)
 Good: "Land first assisted backflip", "Hold a 2-minute plank"
 Bad: "Improve technique", "Work on strength"
 
 TIME RULES:
-- Every item MUST have a deadline in YYYY-MM-DD format.
-- Phase deadlines divide the total timeline (${today} to ${deadline}) roughly evenly.
+- Every TODO item MUST have a deadline in YYYY-MM-DD format.
+- Phase deadlines divide the total timeline (\${today} to \${deadline}) roughly evenly.
 - Task deadlines fall within their phase.
 - Todo deadlines fall within their task.
 - Deadlines should progress logically and steadily.
+- HABIT items do NOT have deadlines — they are ongoing.
 
 PLAN QUALITY — Before producing the final plan, internally verify that:
 - Progression makes logical sense
 - Tasks represent real milestones
 - Todos are atomic single-session actions
+- Habits are specific, measurable recurring actions
+- Habits evolve appropriately across tasks (e.g., protein target increases, practice duration grows)
 - No vague wording is used
 - Nothing requires multiple sessions
 
@@ -261,14 +274,18 @@ PHASE: Phase Title | Phase description | YYYY-MM-DD
   TASK: Task Title | Task description | YYYY-MM-DD
     TODO: Todo item title | YYYY-MM-DD
     TODO: Another todo item | YYYY-MM-DD
+    HABIT: Habit title | frequency | target
+    HABIT: Another habit | daily | 30 minutes
   TASK: Another Task | Description here | YYYY-MM-DD
     TODO: Sub-item | YYYY-MM-DD
+    HABIT: Evolved habit | daily | 45 minutes
 
 RULES:
-- Lines must start with PHASE:, TASK:, or TODO:
+- Lines must start with PHASE:, TASK:, TODO:, or HABIT:
 - Maintain indentation
 - Use | (pipe) to separate fields
-- Dates MUST be YYYY-MM-DD
+- TODO dates MUST be YYYY-MM-DD
+- HABIT lines have 3 fields: title | frequency | target
 - Do NOT add explanations or commentary
 - Output ONLY the plan`;
   };
