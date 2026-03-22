@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useGoals } from '@/hooks/useGoals';
-import { generateId } from '@/lib/storage';
+import { useHabits } from '@/hooks/useHabits';
+import { generateId, loadGoalTemplates, GoalTemplate, saveGoalTemplates } from '@/lib/storage';
 import { Goal, calculateGoalProgress, calculatePhaseProgress, calculateTaskProgress, deriveTaskStatus, getDaysRemaining, getUrgencyClass, getUrgencyColor } from '@/types/goals';
+import { getCurrentStreak, isHabitCompletedOn, getTodayKey } from '@/lib/habits';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +13,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle, Repeat, ToggleLeft } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle, Repeat, ToggleLeft, Flame, CheckCircle2, MessageSquare, Send, Bookmark, Archive, CalendarDays, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProgressRing } from '@/components/ProgressRing';
+import { WeeklyFocus, FocusStar } from '@/components/WeeklyFocus';
 
 // --- Parser types ---
 interface ParsedHabit { title: string; frequency: string; target: string; }
@@ -103,7 +106,12 @@ export default function GoalsPage() {
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
     addHabit, toggleHabit, deleteHabit,
+    addNote, deleteNote,
+    reorderPhases, reorderTasks, reorderTodos,
+    archiveGoal, cloneGoal, saveAsTemplate, createFromTemplate,
   } = useGoals();
+  const { logs: habitLogs, toggleCheckIn } = useHabits();
+  const today = getTodayKey();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [newGoal, setNewGoal] = useState({ title: '', description: '', endGoal: '', deadline: '' });
@@ -120,6 +128,12 @@ export default function GoalsPage() {
   const [newTodoDeadline, setNewTodoDeadline] = useState('');
   const [addHabitTarget, setAddHabitTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
   const [newHabit, setNewHabit] = useState({ title: '', frequency: 'daily', target: '' });
+  const [noteText, setNoteText] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templates, setTemplates] = useState<GoalTemplate[]>(() => loadGoalTemplates());
+  const [showArchived, setShowArchived] = useState(false);
+  const activeGoals = goals.filter(g => !g.archived);
+  const archivedGoals = goals.filter(g => g.archived);
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
   const [aiResponseText, setAiResponseText] = useState('');
   const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
@@ -160,6 +174,25 @@ export default function GoalsPage() {
     setNewTodoTitle('');
     setNewTodoDeadline('');
     setAddTodoTarget(null);
+  };
+
+  const handleSpreadDeadlines = (goalId: string) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal || !goal.deadline || goal.phases.length === 0) return;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(goal.deadline);
+    end.setHours(0, 0, 0, 0);
+    const totalMs = end.getTime() - start.getTime();
+    if (totalMs <= 0) { toast.error('Deadline is in the past'); return; }
+    const stepMs = totalMs / goal.phases.length;
+
+    const updatedPhases = goal.phases.map((phase, i) => {
+      const phaseEnd = new Date(start.getTime() + stepMs * (i + 1));
+      return { ...phase, deadline: phaseEnd.toISOString().split('T')[0] };
+    });
+    updateGoal(goalId, { phases: updatedPhases });
+    toast.success(`Spread deadlines across ${goal.phases.length} phases`);
   };
 
   const handleAddHabit = () => {
@@ -298,8 +331,12 @@ RULES:
   const handleParseResponse = () => {
     const result = parseAIResponse(aiResponseText);
     setParsedResult(result);
-    if (result.phases.length > 0) {
-      toast.success(`Parsed ${result.phases.length} phases!`);
+    if (result.phases.length === 0) {
+      toast.error('No phases found — check the format and try again.');
+    } else if (result.warnings.length > 0) {
+      toast.warning(`Parsed ${result.phases.length} phase${result.phases.length !== 1 ? 's' : ''} with ${result.warnings.length} warning${result.warnings.length !== 1 ? 's' : ''} — review before importing`);
+    } else {
+      toast.success(`Parsed ${result.phases.length} phase${result.phases.length !== 1 ? 's' : ''}!`);
     }
   };
 
@@ -380,15 +417,26 @@ RULES:
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Goals</h1>
           <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">
-            {goals.length} goal{goals.length !== 1 ? 's' : ''} active
+            {activeGoals.length} goal{activeGoals.length !== 1 ? 's' : ''} active
+            {archivedGoals.length > 0 && (
+              <button onClick={() => setShowArchived(!showArchived)} className="ml-2 text-primary hover:underline">
+                {showArchived ? 'Hide' : 'Show'} {archivedGoals.length} archived
+              </button>
+            )}
           </p>
         </div>
-        <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
-          <DialogTrigger asChild>
-            <Button className="font-semibold">
-              <Plus className="h-4 w-4 mr-2" /> New Goal
+        <div className="flex gap-2">
+          {templates.length > 0 && (
+            <Button variant="outline" onClick={() => setShowTemplates(true)}>
+              <Bookmark className="h-4 w-4 mr-2" /> Templates
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
+            <DialogTrigger asChild>
+              <Button className="font-semibold">
+                <Plus className="h-4 w-4 mr-2" /> New Goal
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">Create New Goal</DialogTitle>
@@ -414,10 +462,14 @@ RULES:
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
+      {/* Weekly Focus */}
+      <WeeklyFocus goals={goals} />
+
       {/* Goals List */}
-      {goals.length === 0 ? (
+      {activeGoals.length === 0 && archivedGoals.length === 0 ? (
         <Card className="border-dashed border-2 border-primary/20">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Target className="h-16 w-16 text-primary/30 mb-4" />
@@ -425,12 +477,12 @@ RULES:
           </CardContent>
         </Card>
       ) : (
-        goals.map((goal) => {
+        [...activeGoals, ...(showArchived ? archivedGoals : [])].map((goal) => {
           const progress = calculateGoalProgress(goal);
           const isExpanded = expandedGoals.has(goal.id);
           const goalDays = getDaysRemaining(goal.deadline);
           return (
-            <Card key={goal.id} className={`shadow-sm ${getUrgencyClass(goalDays)}`}>
+            <Card key={goal.id} className={`shadow-sm ${getUrgencyClass(goalDays)} ${goal.archived ? 'opacity-60' : ''}`}>
               <Collapsible open={isExpanded} onOpenChange={() => toggle(expandedGoals, goal.id, setExpandedGoals)}>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -438,7 +490,10 @@ RULES:
                       <div className="flex items-center gap-3">
                         {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                         <div>
-                          <CardTitle className="text-lg">{goal.title}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-lg">{goal.title}</CardTitle>
+                            <FocusStar goalId={goal.id} goals={goals} />
+                          </div>
                           <div className="flex items-center gap-3 mt-1">
                             <p className="text-sm text-muted-foreground">{goal.description}</p>
                             <DeadlineBadge deadline={goal.deadline} />
@@ -466,7 +521,21 @@ RULES:
                       <Button size="sm" variant="outline" onClick={() => { setPromptGoal(goal); }}>
                         <Sparkles className="h-3 w-3 mr-1" /> AI Prompt
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => deleteGoal(goal.id)}>
+                      {goal.deadline && (
+                        <Button size="sm" variant="outline" onClick={() => handleSpreadDeadlines(goal.id)}>
+                          <CalendarDays className="h-3 w-3 mr-1" /> Spread Deadlines
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => { cloneGoal(goal.id); toast.success('Goal cloned!'); }}>
+                        <Copy className="h-3 w-3 mr-1" /> Clone
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { saveAsTemplate(goal.id); toast.success('Saved as template!'); }}>
+                        <Bookmark className="h-3 w-3 mr-1" /> Template
+                      </Button>
+                      <Button size="sm" variant="ghost" className="ml-auto" onClick={() => { archiveGoal(goal.id); toast.success(goal.archived ? 'Goal restored!' : 'Goal archived!'); }}>
+                        <Archive className="h-3 w-3 mr-1" /> {goal.archived ? 'Restore' : 'Archive'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteGoal(goal.id)}>
                         <Trash2 className="h-3 w-3 mr-1" /> Delete
                       </Button>
                     </div>
@@ -486,7 +555,11 @@ RULES:
                                   <ProgressRing value={phaseProgress} size={28} strokeWidth={2.5} />
                                   <DeadlineBadge deadline={phase.deadline} />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <div className="flex flex-col">
+                                    <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={(e) => { e.stopPropagation(); reorderPhases(goal.id, phase.id, 'up'); }}><ArrowUp className="h-2.5 w-2.5" /></Button>
+                                    <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={(e) => { e.stopPropagation(); reorderPhases(goal.id, phase.id, 'down'); }}><ArrowDown className="h-2.5 w-2.5" /></Button>
+                                  </div>
                                   <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setAddTaskTarget({ goalId: goal.id, phaseId: phase.id }); }}>
                                     <Plus className="h-3 w-3 mr-1" /> Task
                                   </Button>
@@ -513,7 +586,9 @@ RULES:
                                             <span className="text-xs text-muted-foreground">{taskProgress}%</span>
                                             <DeadlineBadge deadline={task.deadline} />
                                           </div>
-                                          <div className="flex gap-1">
+                                          <div className="flex gap-0.5 items-center">
+                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); reorderTasks(goal.id, phase.id, task.id, 'up'); }}><ArrowUp className="h-2.5 w-2.5" /></Button>
+                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); reorderTasks(goal.id, phase.id, task.id, 'down'); }}><ArrowDown className="h-2.5 w-2.5" /></Button>
                                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Add to-do" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
                                               <Plus className="h-3 w-3" />
                                             </Button>
@@ -552,19 +627,97 @@ RULES:
                                               <p className="text-[10px] text-amber uppercase tracking-widest font-semibold mb-1 flex items-center gap-1">
                                                 <Repeat className="h-3 w-3" /> Habits & Regimens
                                               </p>
-                                              {(task.habits || []).map(habit => (
+                                              {(task.habits || []).map(habit => {
+                                                const completed = isHabitCompletedOn(habit.id, today, habitLogs);
+                                                const streak = getCurrentStreak(habit.id, habitLogs);
+                                                return (
                                                 <div key={habit.id} className="flex items-center gap-2 group py-0.5">
-                                                  <ToggleLeft className={`h-3.5 w-3.5 flex-shrink-0 cursor-pointer ${habit.active ? 'text-amber' : 'text-muted-foreground'}`} onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)} />
-                                                  <span className={`text-sm ${!habit.active ? 'line-through text-muted-foreground' : ''}`}>{habit.title}</span>
+                                                  {habit.active && (
+                                                    <Checkbox
+                                                      checked={completed}
+                                                      onCheckedChange={() => toggleCheckIn(habit.id)}
+                                                      className="border-amber data-[state=checked]:bg-amber data-[state=checked]:border-amber"
+                                                    />
+                                                  )}
+                                                  {!habit.active && (
+                                                    <ToggleLeft className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer text-muted-foreground" onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)} />
+                                                  )}
+                                                  <span className={`text-sm ${completed ? 'text-muted-foreground' : ''} ${!habit.active ? 'line-through text-muted-foreground' : ''}`}>{habit.title}</span>
                                                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber/10 border-amber/30 text-amber">{habit.frequency}</Badge>
                                                   {habit.target && <span className="text-[10px] text-muted-foreground">{habit.target}</span>}
-                                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteHabit(goal.id, phase.id, task.id, habit.id)}>
-                                                    <Trash2 className="h-3 w-3" />
-                                                  </Button>
+                                                  {streak > 0 && habit.active && (
+                                                    <span className="text-[10px] font-medium text-amber flex items-center gap-0.5">
+                                                      <Flame className="h-3 w-3" />{streak}d
+                                                    </span>
+                                                  )}
+                                                  <div className="flex gap-0.5 ml-auto opacity-0 group-hover:opacity-100">
+                                                    {habit.active && (
+                                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-muted-foreground" title="Deactivate" onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                        <ToggleLeft className="h-3 w-3" />
+                                                      </Button>
+                                                    )}
+                                                    {!habit.active && (
+                                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-amber" title="Activate" onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                        <ToggleLeft className="h-3 w-3" />
+                                                      </Button>
+                                                    )}
+                                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-destructive" onClick={() => deleteHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                      <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                  </div>
                                                 </div>
-                                              ))}
+                                                );
+                                              })}
                                             </div>
                                           )}
+
+                                          {/* Notes / Journal */}
+                                          <div className="mt-2 pt-2 border-t border-border/50">
+                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1 flex items-center gap-1">
+                                              <MessageSquare className="h-3 w-3" /> Notes
+                                            </p>
+                                            {(task.notes || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(note => (
+                                              <div key={note.id} className="flex items-start gap-2 group py-1">
+                                                <div className="flex-1">
+                                                  <p className="text-sm">{note.text}</p>
+                                                  <p className="text-[9px] text-muted-foreground">
+                                                    {new Date(note.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                  </p>
+                                                </div>
+                                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive flex-shrink-0" onClick={() => deleteNote(goal.id, phase.id, task.id, note.id)}>
+                                                  <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                            <div className="flex gap-1 mt-1">
+                                              <Input
+                                                placeholder="Add a note..."
+                                                value={noteText}
+                                                onChange={e => setNoteText(e.target.value)}
+                                                className="h-7 text-xs"
+                                                onKeyDown={e => {
+                                                  if (e.key === 'Enter' && noteText.trim()) {
+                                                    addNote(goal.id, phase.id, task.id, noteText.trim());
+                                                    setNoteText('');
+                                                  }
+                                                }}
+                                              />
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 w-7 p-0"
+                                                disabled={!noteText.trim()}
+                                                onClick={() => {
+                                                  if (noteText.trim()) {
+                                                    addNote(goal.id, phase.id, task.id, noteText.trim());
+                                                    setNoteText('');
+                                                  }
+                                                }}
+                                              >
+                                                <Send className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          </div>
                                         </div>
                                       </CollapsibleContent>
                                     </div>
@@ -757,14 +910,65 @@ RULES:
                 )}
 
                 {parsedResult && parsedResult.phases.length > 0 && (
-                  <Button onClick={handleBulkImport} className="w-full font-semibold">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0)} habits
+                  <Button
+                    onClick={handleBulkImport}
+                    className="w-full font-semibold"
+                    variant={parsedResult.warnings.length > 0 ? 'outline' : 'default'}
+                  >
+                    {parsedResult.warnings.length > 0
+                      ? <AlertCircle className="h-4 w-4 mr-2 text-destructive" />
+                      : <Upload className="h-4 w-4 mr-2" />
+                    }
+                    {parsedResult.warnings.length > 0 ? 'Import Anyway' : 'Import All'} — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0)} habits
                   </Button>
                 )}
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Templates Dialog */}
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Bookmark className="h-5 w-5 text-violet" /> Goal Templates
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2 max-h-[60vh] overflow-auto">
+            {templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No templates yet. Save a goal as a template to get started.</p>
+            ) : (
+              templates.map(tmpl => (
+                <div key={tmpl.id} className="border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{tmpl.name}</p>
+                      <p className="text-xs text-muted-foreground">{tmpl.phases.length} phases, {tmpl.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" onClick={() => {
+                        createFromTemplate(tmpl);
+                        setShowTemplates(false);
+                        toast.success('Goal created from template!');
+                      }}>
+                        <Plus className="h-3 w-3 mr-1" /> Use
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => {
+                        const updated = templates.filter(t => t.id !== tmpl.id);
+                        setTemplates(updated);
+                        saveGoalTemplates(updated);
+                        toast.success('Template deleted');
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

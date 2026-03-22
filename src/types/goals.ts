@@ -1,5 +1,12 @@
 export type Status = 'not_started' | 'in_progress' | 'complete';
 
+export interface HabitLog {
+  habitId: string;
+  date: string; // ISO date string YYYY-MM-DD
+  completed: boolean;
+  value?: number; // optional numeric tracking (e.g. grams of protein, minutes)
+}
+
 export interface ToDo {
   id: string;
   title: string;
@@ -16,6 +23,12 @@ export interface Habit {
   active: boolean;
 }
 
+export interface TaskNote {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -23,6 +36,7 @@ export interface Task {
   status: Status;
   todos: ToDo[];
   habits: Habit[];
+  notes?: TaskNote[];
   order: number;
   deadline?: string;
 }
@@ -44,6 +58,7 @@ export interface Goal {
   deadline?: string;
   phases: Phase[];
   createdAt: string;
+  archived?: boolean;
 }
 
 export function calculateTaskProgress(task: Task): number {

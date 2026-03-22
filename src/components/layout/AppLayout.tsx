@@ -2,9 +2,13 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { MobileTabBar } from "./MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AmbientSound } from "@/components/AmbientSound";
+import { loadSettings } from "@/lib/storage";
+import { useState } from "react";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
+  const [ambientEnabled] = useState(() => loadSettings().ambientSoundEnabled);
 
   if (isMobile) {
     return (
@@ -25,6 +29,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="h-14 flex items-center border-b border-border px-4 bg-card">
             <SidebarTrigger className="mr-4" />
             <h1 className="text-xl font-bold text-primary tracking-tight">TELOS</h1>
+            <div className="ml-auto">
+              <AmbientSound enabled={ambientEnabled} />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
             {children}

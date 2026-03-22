@@ -1,14 +1,20 @@
 import { useGoals } from '@/hooks/useGoals';
 import { useWorkouts } from '@/hooks/useWorkouts';
+import { useHabits } from '@/hooks/useHabits';
 import { getPersonalRecords, getWeeklyVolume } from '@/lib/progressive-overload';
 import { EXERCISE_LABELS } from '@/types/workout';
+import { calculateGoalProgress } from '@/types/goals';
 import { checkAchievements } from '@/lib/achievements';
-import { Target, Dumbbell, Trophy, TrendingUp, Settings, Moon } from 'lucide-react';
+import { getTodaysHabits } from '@/lib/habits';
+import { Target, Dumbbell, Trophy, TrendingUp, Settings, Moon, Flame, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BodyDiagram } from '@/components/BodyDiagram';
 import { loadSettings, loadAchievements, loadWeeklyPlan } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ProgressRing } from '@/components/ProgressRing';
+import { HabitHeatmap } from '@/components/HabitHeatmap';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 
@@ -24,12 +30,15 @@ function getGreeting(): string {
 export default function Index() {
   const { goals } = useGoals();
   const { sessions } = useWorkouts();
+  const { logs: habitLogs, toggleCheckIn } = useHabits();
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
   const unlockedAchievements = loadAchievements();
   const { all: achievements } = checkAchievements(sessions, unlockedAchievements);
   const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const todaysHabits = useMemo(() => getTodaysHabits(goals, habitLogs), [goals, habitLogs]);
+  const habitsCompleted = todaysHabits.filter(h => h.completed).length;
 
   const todayPlan = useMemo(() => {
     const plan = loadWeeklyPlan();
@@ -133,8 +142,86 @@ export default function Index() {
         ))}
       </motion.div>
 
+      {/* Today's Habits */}
+      {todaysHabits.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Today's Habits</p>
+                <p className="text-sm font-medium text-foreground mt-0.5">
+                  {habitsCompleted}/{todaysHabits.length} completed
+                </p>
+              </div>
+              {habitsCompleted === todaysHabits.length && todaysHabits.length > 0 && (
+                <CheckCircle2 className="h-5 w-5 text-teal" />
+              )}
+            </div>
+            <div className="space-y-2">
+              {todaysHabits.map(({ habit, goalTitle, completed, streak }) => (
+                <div key={habit.id} className="flex items-center gap-2.5">
+                  <Checkbox
+                    checked={completed}
+                    onCheckedChange={() => toggleCheckIn(habit.id)}
+                    className="border-amber data-[state=checked]:bg-amber data-[state=checked]:border-amber"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-sm ${completed ? 'text-muted-foreground line-through' : ''}`}>
+                      {habit.title}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5">{goalTitle}</span>
+                  </div>
+                  {streak > 0 && (
+                    <span className="text-[10px] font-medium text-amber flex items-center gap-0.5 flex-shrink-0">
+                      <Flame className="h-3 w-3" />{streak}d
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Habit Heatmap */}
+      {todaysHabits.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <HabitHeatmap goals={goals} logs={habitLogs} />
+        </motion.div>
+      )}
+
+      {/* Goal Progress Cards */}
+      {goals.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Goals</p>
+            <Link to="/goals" className="text-xs text-primary font-medium flex items-center gap-0.5 hover:underline">
+              View all <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {goals.filter(g => !g.archived).slice(0, 4).map(goal => {
+              const progress = calculateGoalProgress(goal);
+              return (
+                <Link key={goal.id} to="/goals">
+                  <div className="rounded-xl bg-card border border-border p-3 shadow-sm flex items-center gap-3 hover:bg-accent/30 transition-colors">
+                    <ProgressRing value={progress} size={36} strokeWidth={3} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{goal.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {goal.phases.length} phase{goal.phases.length !== 1 ? 's' : ''} — {progress}%
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       {/* Body Diagram */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <BodyDiagram prs={prs} />
       </motion.div>
     </div>

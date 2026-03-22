@@ -4,10 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CompoundExercise, EXERCISE_LABELS, SplitDay } from '@/types/workout';
 import { useGoals } from '@/hooks/useGoals';
-import { 
+import {
   loadWeeklyPlan, saveWeeklyPlan, generateId,
-  loadWeeklySchedule, saveWeeklySchedule, WeeklySchedule,
-  loadContacts, Contact,
+  loadTimeBlocks, loadContacts, Contact,
 } from '@/lib/storage';
 import { 
   Calendar, Dumbbell, X, Settings2, ChevronLeft, ChevronRight, Repeat
@@ -67,7 +66,11 @@ export default function ProgramPage() {
     if (saved) return saved.days;
     return DAYS.map(day => ({ day, splitDay: 'rest' as SplitDay, exercises: [] }));
   });
-  const [schedule, setSchedule] = useState<WeeklySchedule>(() => loadWeeklySchedule());
+  const [assignedTodoIds, setAssignedTodoIds] = useState<Set<string>>(() => {
+    const ids = new Set<string>();
+    loadTimeBlocks().forEach(b => { if (b.todoId) ids.add(b.todoId); });
+    return ids;
+  });
   const [contacts] = useState<Contact[]>(() => loadContacts());
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
@@ -94,16 +97,25 @@ export default function ProgramPage() {
   }, [goals]);
 
   const pendingTodos = allTodos.filter(t => !t.done);
-  const assignedIds = useMemo(() => {
-    const ids = new Set<string>();
-    Object.values(schedule).forEach(arr => arr.forEach(id => ids.add(id)));
-    return ids;
-  }, [schedule]);
-  const backlog = pendingTodos.filter(t => !assignedIds.has(t.todoId));
+  const backlog = pendingTodos.filter(t => !assignedTodoIds.has(t.todoId));
 
   const handleToggleTodo = useCallback((todo: FlatTodo) => {
     toggleToDo(todo.goalId, todo.phaseId, todo.taskId, todo.todoId);
   }, [toggleToDo]);
+
+  const handleTodoLinked = useCallback((todoId: string) => {
+    setAssignedTodoIds(prev => new Set([...prev, todoId]));
+  }, []);
+
+  const handleTodoUnlinked = useCallback((todoId: string) => {
+    setAssignedTodoIds(prev => { const next = new Set(prev); next.delete(todoId); return next; });
+  }, []);
+
+  const todoStates = useMemo(() => {
+    const states: Record<string, boolean> = {};
+    allTodos.forEach(t => { states[t.todoId] = t.done; });
+    return states;
+  }, [allTodos]);
 
   const savePlan = (updated: DayPlan[]) => {
     setPlan(updated);
@@ -334,6 +346,9 @@ export default function ProgramPage() {
             todoId: t.todoId, title: t.todoTitle, goalTitle: t.goalTitle,
             goalId: t.goalId, phaseTitle: t.phaseTitle, taskTitle: t.taskTitle,
           }))}
+          todoStates={todoStates}
+          onTodoLinked={handleTodoLinked}
+          onTodoUnlinked={handleTodoUnlinked}
         />
       </div>
 

@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Trash2, Quote, AlertTriangle, Weight } from 'lucide-react';
+import { Download, Upload, Trash2, Quote, AlertTriangle, Weight, Flame } from 'lucide-react';
 import { exportAllData, importAllData, clearAllData, loadSettings, saveSettings } from '@/lib/storage';
 import { toast } from 'sonner';
 
@@ -91,6 +91,24 @@ export default function SettingsPage() {
             <Input type="number" value={settings.bodyweight} onChange={e => updateSettings({ bodyweight: Number(e.target.value) })} className="w-32" min={50} max={500} />
           </div>
           <p className="text-xs text-muted-foreground">Used for strength standards comparison and 1RM calculations</p>
+        </CardContent>
+      </Card>
+
+      {/* Ambient Sound */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-primary" /> Ambient Sound
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Show fire ambience button</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Displays a toggle in the header to play crackling fire audio</p>
+            </div>
+            <Switch checked={settings.ambientSoundEnabled} onCheckedChange={(checked) => updateSettings({ ambientSoundEnabled: checked })} />
+          </div>
         </CardContent>
       </Card>
 

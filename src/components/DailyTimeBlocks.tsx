@@ -134,9 +134,12 @@ interface DailyTimeBlocksProps {
   onToggleTodo?: (todoId: string) => void;
   backlogTodos?: BacklogTodo[];
   contacts?: Contact[];
+  todoStates?: Record<string, boolean>;
+  onTodoLinked?: (todoId: string) => void;
+  onTodoUnlinked?: (todoId: string) => void;
 }
 
-export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [], contacts = [] }: DailyTimeBlocksProps) {
+export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [], contacts = [], todoStates, onTodoLinked, onTodoUnlinked }: DailyTimeBlocksProps) {
   const [blocks, setBlocks] = useState<TimeBlock[]>(() => loadTimeBlocks());
   const [categories, setCategories] = useState<BlockCategory[]>(() => loadBlockCategories());
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
@@ -219,19 +222,26 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
   }, [blocks, persist]);
 
   const deleteBlock = useCallback((blockId: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (block?.todoId) onTodoUnlinked?.(block.todoId);
     persist(blocks.filter(b => b.id !== blockId));
     setEditingBlock(null);
     toast.success('Block removed');
-  }, [blocks, persist]);
+  }, [blocks, persist, onTodoUnlinked]);
 
   const linkTodo = useCallback((blockId: string, todoId: string, title: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (block?.todoId && block.todoId !== todoId) onTodoUnlinked?.(block.todoId);
     updateBlock(blockId, { todoId, title });
+    onTodoLinked?.(todoId);
     toast.success('Todo linked');
-  }, [updateBlock]);
+  }, [blocks, updateBlock, onTodoLinked, onTodoUnlinked]);
 
   const unlinkTodo = useCallback((blockId: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (block?.todoId) onTodoUnlinked?.(block.todoId);
     updateBlock(blockId, { todoId: undefined, title: '' });
-  }, [updateBlock]);
+  }, [blocks, updateBlock, onTodoUnlinked]);
 
   const linkContact = useCallback((blockId: string, contactId: string, contactName: string) => {
     const block = blocks.find(b => b.id === blockId);
@@ -242,8 +252,17 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
   }, [blocks, updateBlock]);
 
   const unlinkContact = useCallback((blockId: string) => {
-    updateBlock(blockId, { contactId: undefined });
-  }, [updateBlock]);
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return;
+    let newTitle = block.title;
+    if (block.contactId) {
+      const contact = contacts.find(c => c.id === block.contactId);
+      if (contact) {
+        newTitle = newTitle.replace(` w/ ${contact.name}`, '').trim();
+      }
+    }
+    updateBlock(blockId, { contactId: undefined, title: newTitle });
+  }, [blocks, contacts, updateBlock]);
 
   const addCategory = useCallback(() => {
     if (!newCatName.trim()) return;
@@ -486,9 +505,10 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                   <div className="flex items-start gap-1.5 min-h-0">
                     {block.todoId && onToggleTodo && (
                       <Checkbox
-                        checked={block.done || false}
+                        checked={todoStates ? (todoStates[block.todoId] ?? false) : (block.done ?? false)}
                         onCheckedChange={() => {
-                          updateBlock(block.id, { done: !block.done });
+                          const newDone = todoStates ? !(todoStates[block.todoId] ?? false) : !block.done;
+                          updateBlock(block.id, { done: newDone });
                           if (block.todoId) onToggleTodo(block.todoId);
                         }}
                         className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
@@ -506,7 +526,7 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                         onKeyDown={(e) => e.key === 'Enter' && setEditingBlock(null)}
                       />
                     ) : (
-                      <span className={`text-xs font-medieval font-medium truncate ${block.done ? 'line-through opacity-50' : ''}`} style={{ color: `hsl(${cat.color})` }}>
+                      <span className={`text-xs font-medieval font-medium truncate ${(block.todoId && todoStates ? (todoStates[block.todoId] ?? false) : (block.done ?? false)) ? 'line-through opacity-50' : ''}`} style={{ color: `hsl(${cat.color})` }}>
                         {block.title || cat.name}
                       </span>
                     )}
