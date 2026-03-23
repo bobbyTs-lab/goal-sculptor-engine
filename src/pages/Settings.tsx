@@ -68,12 +68,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-violet w-72 h-72 -top-14 -right-14" />
-      <div className="circle-ring w-20 h-20 bottom-20 left-4" style={{ color: 'hsl(270 60% 60%)' }} />
-
-      <div className="relative z-10">
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Data management & customization</p>
       </div>

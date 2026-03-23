@@ -6,13 +6,20 @@ export function getTodayKey(): string {
 
 export function isHabitDueToday(habit: Habit): boolean {
   if (!habit.active) return false;
-  const freq = habit.frequency.toLowerCase();
+  const freq = habit.frequency.toLowerCase().trim();
   const day = new Date().getDay(); // 0=Sun, 6=Sat
   if (freq === 'daily') return true;
   if (freq === 'weekdays') return day >= 1 && day <= 5;
   if (freq === 'weekends') return day === 0 || day === 6;
-  // "3x/week", "4x/week" etc — always show as due, user decides when
+  // "3x/week", "4x/week" etc — show it, user decides which days
   if (/^\d+x\/week$/i.test(freq)) return true;
+  // Specific day mentions: "mon/wed/fri", "tuesday, thursday"
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayAbbrs = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const mentioned = dayNames.some((name, i) => freq.includes(name) || freq.includes(dayAbbrs[i]));
+  if (mentioned) {
+    return dayNames.some((name, i) => (freq.includes(name) || freq.includes(dayAbbrs[i])) && i === day);
+  }
   return true; // default: show it
 }
 
@@ -135,22 +142,42 @@ export interface FlatHabit {
 
 import { Goal } from '@/types/goals';
 
+/**
+ * Returns active habits from ALL non-complete tasks in the current phase per goal.
+ * "Current phase" = the first phase that has any non-complete task.
+ * This allows parallel habits (e.g., swim + bike + run + nutrition in an Ironman plan)
+ * while preventing future-phase habits from showing.
+ */
 export function getAllActiveHabits(goals: Goal[]): FlatHabit[] {
   const result: FlatHabit[] = [];
   for (const goal of goals) {
+    if (goal.archived) continue;
+    // Find the current phase: first phase that has any non-complete task
     for (const phase of goal.phases) {
-      for (const task of phase.tasks) {
-        for (const habit of task.habits) {
-          if (habit.active) {
-            result.push({
-              habit,
-              goalId: goal.id,
-              goalTitle: goal.title,
-              taskId: task.id,
-              taskTitle: task.title,
-            });
+      const hasActiveTask = phase.tasks.some(t => {
+        if (t.todos.length === 0) return t.status !== 'complete';
+        return !t.todos.every(td => td.done);
+      });
+      if (hasActiveTask) {
+        // Collect habits from ALL non-complete tasks in this phase
+        for (const task of phase.tasks) {
+          const taskComplete = task.todos.length > 0
+            ? task.todos.every(td => td.done)
+            : task.status === 'complete';
+          if (taskComplete) continue;
+          for (const habit of task.habits) {
+            if (habit.active) {
+              result.push({
+                habit,
+                goalId: goal.id,
+                goalTitle: goal.title,
+                taskId: task.id,
+                taskTitle: task.title,
+              });
+            }
           }
         }
+        break; // only current phase — don't show future phases
       }
     }
   }

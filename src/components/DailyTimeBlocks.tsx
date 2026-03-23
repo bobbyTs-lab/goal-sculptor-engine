@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat, Target, User } from 'lucide-react';
+import { Plus, X, Palette, Trash2, Link2, Unlink, Repeat, Target, User, Clock } from 'lucide-react';
+import { getDaysRemaining, getUrgencyColor } from '@/types/goals';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -127,19 +128,34 @@ export interface BacklogTodo {
   goalId?: string;
   phaseTitle?: string;
   taskTitle?: string;
+  deadline?: string;
+  effort?: string;
+}
+
+export interface DailyHabit {
+  habitId: string;
+  title: string;
+  frequency: string;
+  goalTitle: string;
+  completed: boolean;
+  streak: number;
 }
 
 interface DailyTimeBlocksProps {
   dayName: string;
   onToggleTodo?: (todoId: string) => void;
+  onToggleHabit?: (habitId: string) => void;
   backlogTodos?: BacklogTodo[];
+  deadlineTodos?: BacklogTodo[];
+  dailyHabits?: DailyHabit[];
   contacts?: Contact[];
   todoStates?: Record<string, boolean>;
+  habitStates?: Record<string, boolean>;
   onTodoLinked?: (todoId: string) => void;
   onTodoUnlinked?: (todoId: string) => void;
 }
 
-export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = [], contacts = [], todoStates, onTodoLinked, onTodoUnlinked }: DailyTimeBlocksProps) {
+export default function DailyTimeBlocks({ dayName, onToggleTodo, onToggleHabit, backlogTodos = [], deadlineTodos = [], dailyHabits = [], contacts = [], todoStates, habitStates, onTodoLinked, onTodoUnlinked }: DailyTimeBlocksProps) {
   const [blocks, setBlocks] = useState<TimeBlock[]>(() => loadTimeBlocks());
   const [categories, setCategories] = useState<BlockCategory[]>(() => loadBlockCategories());
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
@@ -161,16 +177,27 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
     [blocks, dayName]
   );
 
-  // Auto-populate from repeatable templates
+  // Auto-populate from repeatable templates, deadline todos, and habits
   useEffect(() => {
     const templates = loadRepeatableBlocks();
     const applicableTemplates = templates.filter(t => shouldShowOnDay(t, dayName));
     const existingBlocks = blocks.filter(b => b.dayName === dayName);
-    
+
     const newBlocks: TimeBlock[] = [];
+    const linkedTodoIds: string[] = [];
+
+    // 0) Remove any leftover habit blocks — habits live in the checklist now, not the planner
+    const habitBlocks = existingBlocks.filter(b => b.habitId);
+    if (habitBlocks.length > 0) {
+      const habitBlockIds = new Set(habitBlocks.map(b => b.id));
+      const cleaned = blocks.filter(b => !habitBlockIds.has(b.id));
+      persist(cleaned);
+      return; // persist triggers re-render, next run will add todo/template blocks
+    }
+
+    // 1) Repeatable templates
     for (const tpl of applicableTemplates) {
-      // Check if a block with this template's title already exists for this day
-      const alreadyExists = existingBlocks.some(b => 
+      const alreadyExists = existingBlocks.some(b =>
         b.title === tpl.title && b.startHour === tpl.startHour && b.startMinute === tpl.startMinute
       );
       if (!alreadyExists) {
@@ -185,10 +212,41 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
         });
       }
     }
+
+    // 2) Deadline todos — auto-create blocks for todos due on this day
+    let todoSlotHour = 9;
+    let todoSlotMinute = 0;
+    for (const todo of deadlineTodos) {
+      const alreadyExists = existingBlocks.some(b => b.todoId === todo.todoId) ||
+                            newBlocks.some(b => b.todoId === todo.todoId);
+      if (!alreadyExists) {
+        const duration = todo.effort === 'LOW' ? 15 : todo.effort === 'HIGH' ? 60 : 30;
+        newBlocks.push({
+          id: generateId(),
+          dayName,
+          categoryId: 'goals',
+          title: todo.title,
+          startHour: todoSlotHour,
+          startMinute: todoSlotMinute,
+          durationMinutes: duration,
+          todoId: todo.todoId,
+        });
+        linkedTodoIds.push(todo.todoId);
+        // Advance slot
+        todoSlotMinute += duration;
+        while (todoSlotMinute >= 60) {
+          todoSlotMinute -= 60;
+          todoSlotHour += 1;
+        }
+      }
+    }
+
+
     if (newBlocks.length > 0) {
       persist([...blocks, ...newBlocks]);
+      linkedTodoIds.forEach(id => onTodoLinked?.(id));
     }
-  }, [dayName]); // only on day change
+  }, [dayName, deadlineTodos.length, dailyHabits]); // re-run when day or habit set changes
 
   const columnLayout = useMemo(() => computeColumns(dayBlocks), [dayBlocks]);
 
@@ -503,6 +561,7 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
               >
                 <div className="px-2 py-1 h-full flex flex-col overflow-hidden">
                   <div className="flex items-start gap-1.5 min-h-0">
+                    {/* Todo checkbox */}
                     {block.todoId && onToggleTodo && (
                       <Checkbox
                         checked={todoStates ? (todoStates[block.todoId] ?? false) : (block.done ?? false)}
@@ -514,6 +573,24 @@ export default function DailyTimeBlocks({ dayName, onToggleTodo, backlogTodos = 
                         className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       />
+                    )}
+                    {/* Habit checkbox */}
+                    {block.habitId && onToggleHabit && !block.todoId && (
+                      <Checkbox
+                        checked={habitStates ? (habitStates[block.habitId] ?? false) : false}
+                        onCheckedChange={() => {
+                          if (block.habitId) onToggleHabit(block.habitId);
+                        }}
+                        className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 border-amber data-[state=checked]:bg-amber data-[state=checked]:border-amber"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                    {/* Type icon */}
+                    {block.habitId && !block.todoId && (
+                      <Repeat className="h-3 w-3 mt-0.5 flex-shrink-0 text-amber" />
+                    )}
+                    {block.todoId && !block.habitId && (
+                      <Target className="h-3 w-3 mt-0.5 flex-shrink-0" style={{ color: `hsl(${cat.color})` }} />
                     )}
                     {isEditing ? (
                       <Input
@@ -689,15 +766,25 @@ function TodoLinkPicker({ backlogTodos, onLink }: {
                   </button>
                   {isOpen && (
                     <div className="ml-3 border-l border-border/20 pl-2 space-y-0">
-                      {todos.map(t => (
-                        <button
-                          key={t.todoId}
-                          onClick={() => onLink(t.todoId, t.title)}
-                          className="w-full text-left px-2 py-1 text-[11px] font-medieval rounded hover:bg-primary/15 transition-colors truncate block"
-                        >
-                          {t.title}
-                        </button>
-                      ))}
+                      {todos.map(t => {
+                        const days = getDaysRemaining(t.deadline);
+                        const urgencyColor = getUrgencyColor(days);
+                        return (
+                          <button
+                            key={t.todoId}
+                            onClick={() => onLink(t.todoId, t.title)}
+                            className="w-full text-left px-2 py-1 text-[11px] font-medieval rounded hover:bg-primary/15 transition-colors flex items-center gap-1"
+                          >
+                            <span className="truncate flex-1">{t.title}</span>
+                            {days !== null && (
+                              <span className={`text-[9px] flex items-center gap-0.5 flex-shrink-0 ${urgencyColor}`}>
+                                <Clock className="h-2.5 w-2.5" />
+                                {days < 0 ? `${Math.abs(days)}d over` : days === 0 ? 'today' : `${days}d`}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

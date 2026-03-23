@@ -65,6 +65,7 @@ export interface TimeBlock {
   startMinute: number; // 0 or 30
   durationMinutes: number; // multiples of 30
   todoId?: string; // optional link to a goal todo
+  habitId?: string; // optional link to a goal habit
   contactId?: string; // optional link to a contact
   done?: boolean;
 }

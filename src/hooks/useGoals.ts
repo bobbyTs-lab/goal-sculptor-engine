@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Goal, Phase, Task, ToDo, Habit, TaskNote } from '@/types/goals';
+import { Goal, Phase, Task, ToDo, Habit, TaskNote, GoalDomain } from '@/types/goals';
 import { loadGoals, saveGoals, generateId, GoalTemplate, loadGoalTemplates, saveGoalTemplates } from '@/lib/storage';
 
 export function useGoals() {
@@ -17,7 +17,7 @@ export function useGoals() {
     { title: 'Mastery', description: 'Sustain, teach, and push limits — own the outcome.' },
   ];
 
-  const addGoal = useCallback((title: string, description: string, endGoal: string, deadline?: string) => {
+  const addGoal = useCallback((title: string, description: string, endGoal: string, deadline?: string, domain?: GoalDomain) => {
     const phases: Phase[] = DEFAULT_PHASES.map((p, i) => ({
       id: generateId(),
       title: p.title,
@@ -31,6 +31,7 @@ export function useGoals() {
       description,
       endGoal,
       deadline,
+      domain,
       phases,
       createdAt: new Date().toISOString(),
     };

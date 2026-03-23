@@ -1,4 +1,7 @@
 export type Status = 'not_started' | 'in_progress' | 'complete';
+export type GoalDomain = 'PHYSICAL' | 'CREATIVE' | 'PROFESSIONAL' | 'INTELLECTUAL' | 'LIFESTYLE';
+export type EffortLevel = 'LOW' | 'MED' | 'HIGH';
+export type HabitEvolution = 'NEW' | 'CARRY' | 'INCREASE' | 'REPLACE';
 
 export interface HabitLog {
   habitId: string;
@@ -13,6 +16,8 @@ export interface ToDo {
   done: boolean;
   order: number;
   deadline?: string;
+  effort?: EffortLevel;
+  isBenchmark?: boolean;
 }
 
 export interface Habit {
@@ -21,6 +26,7 @@ export interface Habit {
   frequency: string; // "daily", "3x/week", "weekdays", etc.
   target?: string; // "200g protein", "30 minutes", etc.
   active: boolean;
+  evolution?: HabitEvolution;
 }
 
 export interface TaskNote {
@@ -50,6 +56,12 @@ export interface Phase {
   order: number;
 }
 
+export interface AdaptationProtocol {
+  ahead: string;
+  behind: string;
+  blocked: string;
+}
+
 export interface Goal {
   id: string;
   title: string;
@@ -59,6 +71,8 @@ export interface Goal {
   phases: Phase[];
   createdAt: string;
   archived?: boolean;
+  domain?: GoalDomain;
+  adaptationProtocol?: AdaptationProtocol;
 }
 
 export function calculateTaskProgress(task: Task): number {

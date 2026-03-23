@@ -80,44 +80,12 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Section circle decorations */
-.section-circle {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.10;
-  filter: blur(80px);
+/* Hide scrollbar but keep scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.section-circle::after {
-  content: '';
-  position: absolute;
-  inset: 15%;
-  border-radius: 50%;
-  opacity: 0.4;
-  filter: blur(40px);
-  background: inherit;
-}
-
-.circle-coral { background: hsl(12 80% 65%); }
-.circle-teal { background: hsl(170 60% 45%); }
-.circle-violet { background: hsl(270 60% 60%); }
-.circle-amber { background: hsl(38 90% 55%); }
-.circle-sky { background: hsl(200 80% 55%); }
-
-/* Small decorative ring accents */
-.circle-ring {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  border: 1.5px solid currentColor;
-  opacity: 0.08;
-}
-
-.circle-ring-filled {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.06;
-  background: currentColor;
-}

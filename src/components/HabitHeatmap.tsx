@@ -44,10 +44,14 @@ export function HabitHeatmap({ goals, logs }: Props) {
 
       if (d.getMonth() !== lastMonth) {
         lastMonth = d.getMonth();
-        monthLabels.push({
-          label: d.toLocaleDateString(undefined, { month: 'short' }),
-          col,
-        });
+        // Only add label if it's at least 3 columns from the previous one to prevent overlap
+        const prevCol = monthLabels.length > 0 ? monthLabels[monthLabels.length - 1].col : -3;
+        if (col - prevCol >= 3) {
+          monthLabels.push({
+            label: d.toLocaleDateString(undefined, { month: 'short' }),
+            col,
+          });
+        }
       }
     }
 

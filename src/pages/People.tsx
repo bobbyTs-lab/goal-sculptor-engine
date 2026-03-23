@@ -98,14 +98,8 @@ export default function PeoplePage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-amber w-80 h-80 -top-16 -right-16" />
-      <div className="section-circle circle-amber w-36 h-36 bottom-24 -left-12 opacity-[0.06]" />
-      <div className="circle-ring w-20 h-20 top-28 left-4" style={{ color: 'hsl(38 90% 55%)' }} />
-      <div className="circle-ring-filled w-6 h-6 top-16 right-20" style={{ color: 'hsl(38 90% 55%)' }} />
-
-      <div className="flex items-center justify-between gap-3 relative z-10">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">People</h1>
           <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Track relationships · Stay connected</p>
@@ -141,11 +135,21 @@ export default function PeoplePage() {
       {/* Contact Cards */}
       {filtered.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {contacts.length === 0 ? 'No contacts yet. Add someone to get started!' : 'No matches found.'}
-            </p>
+          <CardContent className="py-12 text-center space-y-3">
+            <Users className="h-10 w-10 mx-auto text-muted-foreground/30" />
+            {contacts.length === 0 ? (
+              <div>
+                <p className="text-foreground font-semibold">No contacts yet</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                  Keep track of the people who matter. Add contacts with notes, plans, and relationship tags.
+                </p>
+                <Button onClick={openNew} size="sm" className="mt-3 font-semibold">
+                  <Plus className="h-4 w-4 mr-1" /> Add Your First Contact
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No matches found.</p>
+            )}
           </CardContent>
         </Card>
       ) : (

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History, Save, FileText, Sparkles, Copy } from 'lucide-react';
+import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History, Save, FileText, Sparkles, Copy, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { loadTemplates, saveTemplates, generateId, WorkoutTemplate, loadCustomExercises, saveCustomExercises, loadSettings } from '@/lib/storage';
 
@@ -80,6 +80,7 @@ export default function WorkoutsPage() {
 
   // Custom exercise management
   const [showAddCustom, setShowAddCustom] = useState(false);
+  const [showAIConfig, setShowAIConfig] = useState(false);
   const [newExName, setNewExName] = useState('');
   const [newExEquipment, setNewExEquipment] = useState<EquipmentType>('barbell');
   const [newExMuscles, setNewExMuscles] = useState<MuscleGroup[]>([]);
@@ -305,26 +306,20 @@ RULES:
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-sky w-80 h-80 -top-20 -right-20" />
-      <div className="section-circle circle-sky w-44 h-44 bottom-32 -left-16 opacity-[0.06]" />
-      <div className="circle-ring w-24 h-24 top-36 left-6" style={{ color: 'hsl(200 80% 55%)' }} />
-      <div className="circle-ring-filled w-8 h-8 bottom-48 right-12" style={{ color: 'hsl(200 80% 55%)' }} />
-
-      <div className="relative z-10">
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Workouts</h1>
         <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Progressive overload · Compound-first</p>
       </div>
 
       <Tabs defaultValue="session" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="session">Log Session</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="prs">PRs</TabsTrigger>
-          <TabsTrigger value="config">Config</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto no-scrollbar flex justify-start">
+          <TabsTrigger value="session" className="text-xs px-2.5">Log Session</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs px-2.5">Templates</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs px-2.5">History</TabsTrigger>
+          <TabsTrigger value="progress" className="text-xs px-2.5">Progress</TabsTrigger>
+          <TabsTrigger value="prs" className="text-xs px-2.5">PRs</TabsTrigger>
+          <TabsTrigger value="config" className="text-xs px-2.5">Config</TabsTrigger>
         </TabsList>
 
         {/* LOG SESSION TAB */}
@@ -752,33 +747,35 @@ RULES:
                 </div>
 
                 {/* AI Config Generator */}
-                <Collapsible>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 border-dashed">
-                      <Sparkles className="h-3.5 w-3.5" /> Generate Config with AI
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="mt-3 border border-border/30 rounded-lg p-3 space-y-3 bg-muted/10">
+                {!showAIConfig ? (
+                  <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 border-dashed" onClick={() => setShowAIConfig(true)}>
+                    <Sparkles className="h-3.5 w-3.5" /> Generate Config with AI
+                  </Button>
+                ) : (
+                  <div className="border border-border/30 rounded-lg p-3 space-y-3 bg-muted/10">
+                    <div className="flex items-center justify-between">
                       <p className="text-[11px] text-muted-foreground">
                         1. Copy the prompt below and paste it into ChatGPT, Claude, etc.
                         <br/>2. Paste the response back and click "Apply".
                       </p>
-                      <Button size="sm" variant="outline" className="w-full text-xs gap-1.5" onClick={copyAIConfigPrompt}>
-                        <Copy className="h-3 w-3" /> Copy AI Prompt
-                      </Button>
-                      <Textarea
-                        value={aiConfigResponse}
-                        onChange={e => setAiConfigResponse(e.target.value)}
-                        placeholder={`Paste AI response here...\n\nSETS: 3\nREP_MIN: 8\nREP_MAX: 12\nWEIGHT: 30\nINCREMENT: 2.5\nEQUIPMENT: dumbbell\nMUSCLES: chest,shoulders,triceps`}
-                        className="font-mono text-xs min-h-[80px]"
-                      />
-                      <Button size="sm" onClick={parseAIConfigResponse} disabled={!aiConfigResponse.trim()} className="w-full text-xs gap-1.5 font-semibold">
-                        <Sparkles className="h-3 w-3" /> Apply AI Config
-                      </Button>
+                      <button onClick={() => setShowAIConfig(false)} className="p-1 rounded hover:bg-accent/50 text-muted-foreground flex-shrink-0 ml-2">
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                    <Button size="sm" variant="outline" className="w-full text-xs gap-1.5" onClick={copyAIConfigPrompt}>
+                      <Copy className="h-3 w-3" /> Copy AI Prompt
+                    </Button>
+                    <Textarea
+                      value={aiConfigResponse}
+                      onChange={e => setAiConfigResponse(e.target.value)}
+                      placeholder={`Paste AI response here...\n\nSETS: 3\nREP_MIN: 8\nREP_MAX: 12\nWEIGHT: 30\nINCREMENT: 2.5\nEQUIPMENT: dumbbell\nMUSCLES: chest,shoulders,triceps`}
+                      className="font-mono text-xs min-h-[80px]"
+                    />
+                    <Button size="sm" onClick={parseAIConfigResponse} disabled={!aiConfigResponse.trim()} className="w-full text-xs gap-1.5 font-semibold">
+                      <Sparkles className="h-3 w-3" /> Apply AI Config
+                    </Button>
+                  </div>
+                )}
 
                 <div className="border-t pt-4">
                   <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Starting Config</label>
