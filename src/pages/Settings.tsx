@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Trash2, Quote, AlertTriangle, Weight } from 'lucide-react';
+import { Download, Upload, Trash2, Quote, AlertTriangle, Weight, Flame } from 'lucide-react';
 import { exportAllData, importAllData, clearAllData, loadSettings, saveSettings } from '@/lib/storage';
 import { toast } from 'sonner';
 
@@ -68,12 +68,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-violet w-72 h-72 -top-14 -right-14" />
-      <div className="circle-ring w-20 h-20 bottom-20 left-4" style={{ color: 'hsl(270 60% 60%)' }} />
-
-      <div className="relative z-10">
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Data management & customization</p>
       </div>
@@ -91,6 +87,24 @@ export default function SettingsPage() {
             <Input type="number" value={settings.bodyweight} onChange={e => updateSettings({ bodyweight: Number(e.target.value) })} className="w-32" min={50} max={500} />
           </div>
           <p className="text-xs text-muted-foreground">Used for strength standards comparison and 1RM calculations</p>
+        </CardContent>
+      </Card>
+
+      {/* Ambient Sound */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-primary" /> Ambient Sound
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Show fire ambience button</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Displays a toggle in the header to play crackling fire audio</p>
+            </div>
+            <Switch checked={settings.ambientSoundEnabled} onCheckedChange={(checked) => updateSettings({ ambientSoundEnabled: checked })} />
+          </div>
         </CardContent>
       </Card>
 

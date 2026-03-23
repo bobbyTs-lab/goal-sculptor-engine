@@ -1,4 +1,4 @@
-import { WorkoutSession, CompoundExercise } from '@/types/workout';
+import { WorkoutSession } from '@/types/workout';
 import { getPersonalRecords, calculateVolumeLoad } from './progressive-overload';
 
 export interface Achievement {

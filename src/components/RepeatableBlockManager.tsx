@@ -31,8 +31,20 @@ function formatTime(h: number, m: number): string {
   return m === 0 ? `${display} ${period}` : `${display}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-function shouldShowOnDay(block: RepeatableBlock, dayName: string): boolean {
+const DAY_NAMES_FROM_INDEX = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function resolveDayName(dayNameOrDate: string): string {
+  // If it looks like a date key (YYYY-MM-DD), convert to day name
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dayNameOrDate)) {
+    const d = new Date(dayNameOrDate + 'T12:00:00');
+    return DAY_NAMES_FROM_INDEX[d.getDay()];
+  }
+  return dayNameOrDate;
+}
+
+function shouldShowOnDay(block: RepeatableBlock, dayNameOrDate: string): boolean {
   if (!block.enabled) return false;
+  const dayName = resolveDayName(dayNameOrDate);
   switch (block.repeatPattern) {
     case 'daily': return true;
     case 'weekdays': return !['Saturday', 'Sunday'].includes(dayName);

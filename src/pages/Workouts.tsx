@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useWorkouts } from '@/hooks/useWorkouts';
-import { CompoundExercise, EXERCISE_LABELS, SetLog, ExerciseLog, SplitDay } from '@/types/workout';
+import { CompoundExercise, EXERCISE_LABELS, SetLog, ExerciseLog, SplitDay, CustomExercise, getExerciseLabel, isBuiltInExercise, EquipmentType, MuscleGroup, ALL_MUSCLE_GROUPS } from '@/types/workout';
 import { getProgressionSuggestion, getExerciseHistory, getPersonalRecords, getWeeklyVolume, calculateVolumeLoad } from '@/lib/progressive-overload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History, Save, FileText } from 'lucide-react';
+import { Dumbbell, TrendingUp, Trophy, Timer, Plus, Trash2, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronRight, History, Save, FileText, Sparkles, Copy, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { loadTemplates, saveTemplates, generateId, WorkoutTemplate } from '@/lib/storage';
+import { loadTemplates, saveTemplates, generateId, WorkoutTemplate, loadCustomExercises, saveCustomExercises, loadSettings } from '@/lib/storage';
 
-function RestTimer() {
+const EQUIPMENT_LABELS: Record<EquipmentType, string> = {
+  barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable',
+  machine: 'Machine', bodyweight: 'Bodyweight', other: 'Other',
+};
+
+function RestTimer({ onRunningChange }: { onRunningChange: (running: boolean) => void }) {
   const [seconds, setSeconds] = useState(90);
   const [running, setRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(90);
@@ -23,11 +29,13 @@ function RestTimer() {
   const start = () => {
     setTimeLeft(seconds);
     setRunning(true);
+    onRunningChange(true);
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(interval);
           setRunning(false);
+          onRunningChange(false);
           toast.success('Rest complete! Time to lift! 💪');
           return 0;
         }
@@ -57,13 +65,143 @@ function RestTimer() {
 }
 
 export default function WorkoutsPage() {
-  const { sessions, configs, addSession, deleteSession, updateConfig } = useWorkouts();
+  const [customExercises, setCustomExercises] = useState<CustomExercise[]>(() => loadCustomExercises());
+  const { sessions, configs, addSession, deleteSession, updateConfig, addConfig, deleteConfig } = useWorkouts(customExercises);
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
 
+  const label = (id: string) => getExerciseLabel(id, customExercises);
+
+  // Combined exercise options: built-in + custom
+  const allExerciseOptions: { id: string; label: string }[] = [
+    ...Object.entries(EXERCISE_LABELS).map(([id, name]) => ({ id, label: name })),
+    ...customExercises.map(e => ({ id: e.id, label: e.name })),
+  ];
+
+  // Custom exercise management
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [showAIConfig, setShowAIConfig] = useState(false);
+  const [newExName, setNewExName] = useState('');
+  const [newExEquipment, setNewExEquipment] = useState<EquipmentType>('barbell');
+  const [newExMuscles, setNewExMuscles] = useState<MuscleGroup[]>([]);
+  const [newExWeight, setNewExWeight] = useState(45);
+  const [newExSets, setNewExSets] = useState(3);
+  const [newExRepMin, setNewExRepMin] = useState(8);
+  const [newExRepMax, setNewExRepMax] = useState(12);
+  const [newExIncrement, setNewExIncrement] = useState(5);
+
+  const handleAddCustomExercise = () => {
+    if (!newExName.trim()) return;
+    const id = `custom_${newExName.trim().toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    const exercise: CustomExercise = {
+      id, name: newExName.trim(), equipment: newExEquipment,
+      muscleGroups: newExMuscles,
+    };
+    const updated = [...customExercises, exercise];
+    setCustomExercises(updated);
+    saveCustomExercises(updated);
+    addConfig({
+      exercise: id, targetSets: newExSets,
+      repRangeMin: newExRepMin, repRangeMax: newExRepMax,
+      currentWeight: newExWeight, weightIncrement: newExIncrement,
+    });
+    setShowAddCustom(false);
+    setNewExName(''); setNewExMuscles([]); setNewExWeight(45);
+    setNewExSets(3); setNewExRepMin(8); setNewExRepMax(12); setNewExIncrement(5);
+    toast.success(`Added "${exercise.name}"`);
+  };
+
+  const handleDeleteCustomExercise = (id: string) => {
+    const updated = customExercises.filter(e => e.id !== id);
+    setCustomExercises(updated);
+    saveCustomExercises(updated);
+    deleteConfig(id);
+    toast.success('Exercise removed');
+  };
+
+  const toggleMuscle = (m: MuscleGroup) => {
+    setNewExMuscles(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  };
+
+  // AI config generator
+  const [aiConfigResponse, setAiConfigResponse] = useState('');
+
+  const generateAIConfigPrompt = () => {
+    const settings = loadSettings();
+    const name = newExName.trim() || '[EXERCISE NAME]';
+    const equipment = EQUIPMENT_LABELS[newExEquipment];
+    const muscles = newExMuscles.length > 0 ? newExMuscles.join(', ') : '(not specified)';
+    return `You are an expert strength and conditioning coach.
+
+I need an optimal progressive overload configuration for a new exercise.
+
+EXERCISE: ${name}
+EQUIPMENT: ${equipment}
+MUSCLE GROUPS: ${muscles}
+MY BODYWEIGHT: ${settings.bodyweight} lbs
+
+Based on this exercise and my bodyweight, provide the ideal training configuration.
+
+Consider:
+- Appropriate starting weight for an intermediate lifter at ${settings.bodyweight} lbs
+- Optimal rep range for hypertrophy and strength progression
+- Correct set count for this movement type
+- Appropriate weight increment that avoids stalling (smaller for isolation/upper body, larger for compound/lower body)
+
+OUTPUT FORMAT — Use this EXACT format, one value per line:
+SETS: [number]
+REP_MIN: [number]
+REP_MAX: [number]
+WEIGHT: [number in lbs]
+INCREMENT: [number in lbs]
+EQUIPMENT: [barbell|dumbbell|cable|machine|bodyweight|other]
+MUSCLES: [comma-separated from: chest,back,shoulders,biceps,triceps,quads,hamstrings,glutes,calves,core,forearms,traps]
+
+RULES:
+- Output ONLY the config lines, no explanations
+- Weight should be per-hand for dumbbells
+- Increment should be realistic (1.25-2.5 for isolation, 5-10 for compounds)
+- Rep range should be 6-12 for hypertrophy, 3-6 for strength, 12-20 for endurance`;
+  };
+
+  const copyAIConfigPrompt = () => {
+    navigator.clipboard.writeText(generateAIConfigPrompt());
+    toast.success('AI prompt copied to clipboard!');
+  };
+
+  const parseAIConfigResponse = () => {
+    const lines = aiConfigResponse.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const setsMatch = trimmed.match(/^SETS:\s*(\d+)/i);
+      if (setsMatch) setNewExSets(parseInt(setsMatch[1]));
+      const repMinMatch = trimmed.match(/^REP_MIN:\s*(\d+)/i);
+      if (repMinMatch) setNewExRepMin(parseInt(repMinMatch[1]));
+      const repMaxMatch = trimmed.match(/^REP_MAX:\s*(\d+)/i);
+      if (repMaxMatch) setNewExRepMax(parseInt(repMaxMatch[1]));
+      const weightMatch = trimmed.match(/^WEIGHT:\s*([\d.]+)/i);
+      if (weightMatch) setNewExWeight(parseFloat(weightMatch[1]));
+      const incMatch = trimmed.match(/^INCREMENT:\s*([\d.]+)/i);
+      if (incMatch) setNewExIncrement(parseFloat(incMatch[1]));
+      const eqMatch = trimmed.match(/^EQUIPMENT:\s*(\w+)/i);
+      if (eqMatch && ['barbell','dumbbell','cable','machine','bodyweight','other'].includes(eqMatch[1].toLowerCase())) {
+        setNewExEquipment(eqMatch[1].toLowerCase() as EquipmentType);
+      }
+      const muscleMatch = trimmed.match(/^MUSCLES:\s*(.+)/i);
+      if (muscleMatch) {
+        const parsed = muscleMatch[1].split(',').map(m => m.trim().toLowerCase()).filter(m =>
+          ALL_MUSCLE_GROUPS.includes(m as MuscleGroup)
+        ) as MuscleGroup[];
+        if (parsed.length > 0) setNewExMuscles(parsed);
+      }
+    }
+    toast.success('Config imported from AI response!');
+    setAiConfigResponse('');
+  };
+
   const [splitDay, setSplitDay] = useState<SplitDay>('push');
   const [sessionExercises, setSessionExercises] = useState<{
-    exercise: CompoundExercise;
+    exercise: string;
     sets: SetLog[];
   }[]>([]);
   const [sessionNotes, setSessionNotes] = useState('');
@@ -76,13 +214,25 @@ export default function WorkoutsPage() {
     setExpandedSessions(next);
   };
 
-  const addExerciseToSession = (exercise: CompoundExercise) => {
+  const addExerciseToSession = (exercise: string) => {
     const config = configs.find(c => c.exercise === exercise);
     if (!config) return;
-    const defaultSets: SetLog[] = Array.from({ length: config.targetSets }, () => ({
-      reps: config.repRangeMin, weight: config.currentWeight, rpe: 3,
-    }));
-    setSessionExercises([...sessionExercises, { exercise, sets: defaultSets }]);
+
+    // Pre-populate from last session if available, otherwise use config defaults
+    const lastSession = getExerciseHistory(sessions, exercise)[0];
+    let sets: SetLog[];
+    if (lastSession && lastSession.sets.length > 0) {
+      sets = lastSession.sets.map(s => ({
+        reps: s.reps,
+        weight: Math.max(s.weight, config.currentWeight), // use config weight if bumped
+        rpe: s.rpe,
+      }));
+    } else {
+      sets = Array.from({ length: config.targetSets }, () => ({
+        reps: config.repRangeMin, weight: config.currentWeight, rpe: 3,
+      }));
+    }
+    setSessionExercises([...sessionExercises, { exercise, sets }]);
   };
 
   const updateSet = (exIdx: number, setIdx: number, field: keyof SetLog, value: number) => {
@@ -127,7 +277,7 @@ export default function WorkoutsPage() {
     const exercises = template.exercises.map(e => {
       const config = configs.find(c => c.exercise === e.exercise);
       return {
-        exercise: e.exercise as CompoundExercise,
+        exercise: e.exercise,
         sets: Array.from({ length: e.sets }, () => ({
           reps: e.reps || config?.repRangeMin || 6, weight: config?.currentWeight || e.weight, rpe: 3,
         })),
@@ -144,7 +294,8 @@ export default function WorkoutsPage() {
     toast.success('Template deleted');
   };
 
-  const [selectedExercise, setSelectedExercise] = useState<CompoundExercise>('squat');
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<string>('squat');
   const history = getExerciseHistory(sessions, selectedExercise);
   const chartData = history.slice().reverse().map(h => ({
     date: new Date(h.date).toLocaleDateString(),
@@ -155,26 +306,20 @@ export default function WorkoutsPage() {
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-sky w-80 h-80 -top-20 -right-20" />
-      <div className="section-circle circle-sky w-44 h-44 bottom-32 -left-16 opacity-[0.06]" />
-      <div className="circle-ring w-24 h-24 top-36 left-6" style={{ color: 'hsl(200 80% 55%)' }} />
-      <div className="circle-ring-filled w-8 h-8 bottom-48 right-12" style={{ color: 'hsl(200 80% 55%)' }} />
-
-      <div className="relative z-10">
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Workouts</h1>
         <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">Progressive overload · Compound-first</p>
       </div>
 
       <Tabs defaultValue="session" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="session">Log Session</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="prs">PRs</TabsTrigger>
-          <TabsTrigger value="config">Config</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto no-scrollbar flex justify-start">
+          <TabsTrigger value="session" className="text-xs px-2.5">Log Session</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs px-2.5">Templates</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs px-2.5">History</TabsTrigger>
+          <TabsTrigger value="progress" className="text-xs px-2.5">Progress</TabsTrigger>
+          <TabsTrigger value="prs" className="text-xs px-2.5">PRs</TabsTrigger>
+          <TabsTrigger value="config" className="text-xs px-2.5">Config</TabsTrigger>
         </TabsList>
 
         {/* LOG SESSION TAB */}
@@ -193,16 +338,16 @@ export default function WorkoutsPage() {
             </div>
             <div>
               <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Add Exercise</label>
-              <Select onValueChange={(v) => addExerciseToSession(v as CompoundExercise)}>
+              <Select onValueChange={(v) => addExerciseToSession(v)}>
                 <SelectTrigger className="w-48 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(EXERCISE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  {allExerciseOptions.map(({ id, label: name }) => (
+                    <SelectItem key={id} value={id}>{name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <RestTimer />
+            <RestTimer onRunningChange={setTimerRunning} />
           </div>
 
           {sessionExercises.map((ex, exIdx) => {
@@ -216,7 +361,7 @@ export default function WorkoutsPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Dumbbell className="h-4 w-4 text-primary" />
-                      {EXERCISE_LABELS[ex.exercise]}
+                      {label(ex.exercise)}
                     </CardTitle>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeExercise(exIdx)}>
                       <Trash2 className="h-4 w-4" />
@@ -226,11 +371,14 @@ export default function WorkoutsPage() {
                     <div className={`text-xs p-2 rounded-lg mt-2 border ${
                       suggestion.type === 'increase_weight' ? 'bg-teal/10 text-teal border-teal/20' :
                       suggestion.type === 'deload' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                      suggestion.type === 'fatigue_warning' ? 'bg-amber/10 text-amber border-amber/20' :
                       'bg-primary/10 text-primary border-primary/20'
                     }`}>
                       {suggestion.type === 'increase_weight' && <ArrowUp className="h-3 w-3 inline mr-1" />}
                       {suggestion.type === 'deload' && <ArrowDown className="h-3 w-3 inline mr-1" />}
+                      {suggestion.type === 'fatigue_warning' && <TrendingUp className="h-3 w-3 inline mr-1" />}
                       {suggestion.type === 'hold' && <Minus className="h-3 w-3 inline mr-1" />}
+                      {suggestion.type === 'increase_reps' && <ArrowUp className="h-3 w-3 inline mr-1" />}
                       {suggestion.message}
                     </div>
                   )}
@@ -265,8 +413,8 @@ export default function WorkoutsPage() {
                 </CardContent>
               </Card>
               <div className="flex gap-3">
-                <Button onClick={logSession} className="flex-1 font-bold text-lg py-6">
-                  Log Session
+                <Button onClick={logSession} disabled={timerRunning} className="flex-1 font-bold text-lg py-6" title={timerRunning ? 'Wait for rest timer to finish' : undefined}>
+                  {timerRunning ? 'Resting...' : 'Log Session'}
                 </Button>
                 <Button onClick={saveAsTemplate} variant="outline">
                   <Save className="h-4 w-4 mr-1" /> Save Template
@@ -316,7 +464,7 @@ export default function WorkoutsPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {t.exercises.map((e, j) => (
                       <Badge key={j} variant="outline" className="text-xs">
-                        {EXERCISE_LABELS[e.exercise as CompoundExercise] || e.exercise} · {e.sets}×{e.reps}
+                        {label(e.exercise)} · {e.sets}×{e.reps}
                       </Badge>
                     ))}
                   </div>
@@ -377,7 +525,7 @@ export default function WorkoutsPage() {
                             <div key={exIdx} className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <Dumbbell className="h-3.5 w-3.5 text-primary" />
-                                <span className="font-semibold text-sm">{EXERCISE_LABELS[ex.exercise]}</span>
+                                <span className="font-semibold text-sm">{label(ex.exercise)}</span>
                                 <span className="text-xs text-muted-foreground ml-auto">{calculateVolumeLoad(ex.sets)} lbs</span>
                               </div>
                               <div className="ml-6 space-y-0.5">
@@ -406,11 +554,11 @@ export default function WorkoutsPage() {
           <div className="flex gap-4 items-end">
             <div>
               <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Exercise</label>
-              <Select value={selectedExercise} onValueChange={(v) => setSelectedExercise(v as CompoundExercise)}>
+              <Select value={selectedExercise} onValueChange={setSelectedExercise}>
                 <SelectTrigger className="w-48 mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(EXERCISE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  {allExerciseOptions.map(({ id, label: name }) => (
+                    <SelectItem key={id} value={id}>{name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -473,7 +621,7 @@ export default function WorkoutsPage() {
                   <div className="flex items-center gap-3">
                     <Trophy className="h-8 w-8 text-coral" />
                     <div>
-                      <p className="font-semibold text-lg">{EXERCISE_LABELS[pr.exercise]}</p>
+                      <p className="font-semibold text-lg">{label(pr.exercise)}</p>
                       <p className="text-3xl font-bold text-primary">{pr.weight} × {pr.reps}</p>
                       <p className="text-xs text-muted-foreground">Vol: {pr.volumeLoad} lbs · {new Date(pr.date).toLocaleDateString()}</p>
                     </div>
@@ -493,34 +641,174 @@ export default function WorkoutsPage() {
 
         {/* CONFIG TAB */}
         <TabsContent value="config" className="space-y-4">
-          {configs.map(config => (
-            <Card key={config.exercise} className="shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg">{EXERCISE_LABELS[config.exercise]}</h3>
-                  <Badge variant="outline">{config.targetSets} × {config.repRangeMin}-{config.repRangeMax}</Badge>
+          {configs.map(config => {
+            const isCustom = !isBuiltInExercise(config.exercise);
+            const customEx = isCustom ? customExercises.find(e => e.id === config.exercise) : null;
+            return (
+              <Card key={config.exercise} className="shadow-sm">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg">{label(config.exercise)}</h3>
+                      {customEx && (
+                        <Badge variant="outline" className="text-xs capitalize">{customEx.equipment}</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{config.targetSets} × {config.repRangeMin}-{config.repRangeMax}</Badge>
+                      {isCustom && (
+                        <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => handleDeleteCustomExercise(config.exercise)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {customEx && customEx.muscleGroups.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {customEx.muscleGroups.map(m => (
+                        <Badge key={m} variant="outline" className="text-[10px] capitalize">{m}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Sets</label>
+                      <Input type="number" value={config.targetSets} onChange={e => updateConfig(config.exercise, { targetSets: Number(e.target.value) })} className="h-8 mt-1" min={1} max={10} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Weight</label>
+                      <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Increment</label>
+                      <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1" step={2.5} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Min</label>
+                      <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Max</label>
+                      <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {/* Add Custom Exercise */}
+          <Dialog open={showAddCustom} onOpenChange={setShowAddCustom}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full border-dashed border-2 border-primary/20 py-8 text-primary hover:bg-primary/5">
+                <Plus className="h-5 w-5 mr-2" /> Add Custom Exercise
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">New Custom Exercise</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-2">
+                <div>
+                  <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Exercise Name</label>
+                  <Input value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="e.g., Incline DB Press" className="mt-1" />
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Weight</label>
-                    <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Increment</label>
-                    <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1" step={2.5} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Min</label>
-                    <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Max</label>
-                    <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1" />
+
+                <div>
+                  <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Equipment</label>
+                  <Select value={newExEquipment} onValueChange={(v) => setNewExEquipment(v as EquipmentType)}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(EQUIPMENT_LABELS).map(([key, name]) => (
+                        <SelectItem key={key} value={key}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Muscle Groups</label>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {ALL_MUSCLE_GROUPS.map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => toggleMuscle(m)}
+                        className={`px-2.5 py-1 rounded text-xs capitalize border transition-all ${
+                          newExMuscles.includes(m)
+                            ? 'bg-primary/15 border-primary/40 text-primary font-medium'
+                            : 'border-border text-muted-foreground hover:border-primary/20'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                {/* AI Config Generator */}
+                {!showAIConfig ? (
+                  <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 border-dashed" onClick={() => setShowAIConfig(true)}>
+                    <Sparkles className="h-3.5 w-3.5" /> Generate Config with AI
+                  </Button>
+                ) : (
+                  <div className="border border-border/30 rounded-lg p-3 space-y-3 bg-muted/10">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] text-muted-foreground">
+                        1. Copy the prompt below and paste it into ChatGPT, Claude, etc.
+                        <br/>2. Paste the response back and click "Apply".
+                      </p>
+                      <button onClick={() => setShowAIConfig(false)} className="p-1 rounded hover:bg-accent/50 text-muted-foreground flex-shrink-0 ml-2">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <Button size="sm" variant="outline" className="w-full text-xs gap-1.5" onClick={copyAIConfigPrompt}>
+                      <Copy className="h-3 w-3" /> Copy AI Prompt
+                    </Button>
+                    <Textarea
+                      value={aiConfigResponse}
+                      onChange={e => setAiConfigResponse(e.target.value)}
+                      placeholder={`Paste AI response here...\n\nSETS: 3\nREP_MIN: 8\nREP_MAX: 12\nWEIGHT: 30\nINCREMENT: 2.5\nEQUIPMENT: dumbbell\nMUSCLES: chest,shoulders,triceps`}
+                      className="font-mono text-xs min-h-[80px]"
+                    />
+                    <Button size="sm" onClick={parseAIConfigResponse} disabled={!aiConfigResponse.trim()} className="w-full text-xs gap-1.5 font-semibold">
+                      <Sparkles className="h-3 w-3" /> Apply AI Config
+                    </Button>
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Starting Config</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase">Starting Weight</label>
+                      <Input type="number" value={newExWeight} onChange={e => setNewExWeight(Number(e.target.value))} className="h-8 mt-0.5" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase">Sets</label>
+                      <Input type="number" value={newExSets} onChange={e => setNewExSets(Number(e.target.value))} className="h-8 mt-0.5" min={1} max={10} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase">Increment</label>
+                      <Input type="number" value={newExIncrement} onChange={e => setNewExIncrement(Number(e.target.value))} className="h-8 mt-0.5" step={2.5} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase">Rep Min</label>
+                      <Input type="number" value={newExRepMin} onChange={e => setNewExRepMin(Number(e.target.value))} className="h-8 mt-0.5" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase">Rep Max</label>
+                      <Input type="number" value={newExRepMax} onChange={e => setNewExRepMax(Number(e.target.value))} className="h-8 mt-0.5" />
+                    </div>
+                  </div>
+                </div>
+
+                <Button onClick={handleAddCustomExercise} disabled={!newExName.trim()} className="w-full font-semibold">
+                  <Plus className="h-4 w-4 mr-2" /> Add Exercise
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

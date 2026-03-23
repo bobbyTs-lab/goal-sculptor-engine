@@ -1,5 +1,5 @@
-import { Goal } from '@/types/goals';
-import { WorkoutSession, ExerciseConfig, WeeklyPlan } from '@/types/workout';
+import { Goal, HabitLog } from '@/types/goals';
+import { WorkoutSession, ExerciseConfig, WeeklyPlan, CustomExercise } from '@/types/workout';
 import { DEFAULT_CONFIGS } from '@/types/workout';
 import { UnlockedAchievement } from '@/lib/achievements';
 
@@ -17,6 +17,9 @@ const KEYS = {
   BLOCK_CATEGORIES: 'telos_block_categories',
   REPEATABLE_BLOCKS: 'telos_repeatable_blocks',
   CONTACTS: 'telos_contacts',
+  CUSTOM_EXERCISES: 'telos_custom_exercises',
+  HABIT_LOGS: 'telos_habit_logs',
+  GOAL_TEMPLATES: 'telos_goal_templates',
 } as const;
 
 // Repeatable Block Template
@@ -62,6 +65,7 @@ export interface TimeBlock {
   startMinute: number; // 0 or 30
   durationMinutes: number; // multiples of 30
   todoId?: string; // optional link to a goal todo
+  habitId?: string; // optional link to a goal habit
   contactId?: string; // optional link to a contact
   done?: boolean;
 }
@@ -164,6 +168,26 @@ export const saveRepeatableBlocks = (blocks: RepeatableBlock[]) => save(KEYS.REP
 export const loadContacts = (): Contact[] => load(KEYS.CONTACTS, []);
 export const saveContacts = (contacts: Contact[]) => save(KEYS.CONTACTS, contacts);
 
+// Custom Exercises
+export const loadCustomExercises = (): CustomExercise[] => load(KEYS.CUSTOM_EXERCISES, []);
+export const saveCustomExercises = (exercises: CustomExercise[]) => save(KEYS.CUSTOM_EXERCISES, exercises);
+
+// Habit Logs
+export const loadHabitLogs = (): HabitLog[] => load(KEYS.HABIT_LOGS, []);
+export const saveHabitLogs = (logs: HabitLog[]) => save(KEYS.HABIT_LOGS, logs);
+
+// Goal Templates
+export interface GoalTemplate {
+  id: string;
+  name: string;
+  description: string;
+  endGoal: string;
+  phases: { title: string; description: string; tasks: { title: string; description: string; todos: string[]; habits: { title: string; frequency: string; target?: string }[] }[] }[];
+  createdAt: string;
+}
+export const loadGoalTemplates = (): GoalTemplate[] => load(KEYS.GOAL_TEMPLATES, []);
+export const saveGoalTemplates = (templates: GoalTemplate[]) => save(KEYS.GOAL_TEMPLATES, templates);
+
 // Export all data
 export function exportAllData(): string {
   return JSON.stringify({
@@ -174,6 +198,13 @@ export function exportAllData(): string {
     settings: loadSettings(),
     achievements: loadAchievements(),
     templates: loadTemplates(),
+    weeklySchedule: loadWeeklySchedule(),
+    timeBlocks: loadTimeBlocks(),
+    blockCategories: loadBlockCategories(),
+    repeatableBlocks: loadRepeatableBlocks(),
+    contacts: loadContacts(),
+    customExercises: loadCustomExercises(),
+    habitLogs: loadHabitLogs(),
   }, null, 2);
 }
 
@@ -186,6 +217,13 @@ export function importAllData(data: Record<string, unknown>) {
   if (data.settings) saveSettings(data.settings as AppSettings);
   if (data.achievements) saveAchievements(data.achievements as UnlockedAchievement[]);
   if (data.templates) saveTemplates(data.templates as WorkoutTemplate[]);
+  if (data.weeklySchedule) saveWeeklySchedule(data.weeklySchedule as WeeklySchedule);
+  if (data.timeBlocks) saveTimeBlocks(data.timeBlocks as TimeBlock[]);
+  if (data.blockCategories) saveBlockCategories(data.blockCategories as BlockCategory[]);
+  if (data.repeatableBlocks) saveRepeatableBlocks(data.repeatableBlocks as RepeatableBlock[]);
+  if (data.contacts) saveContacts(data.contacts as Contact[]);
+  if (data.customExercises) saveCustomExercises(data.customExercises as CustomExercise[]);
+  if (data.habitLogs) saveHabitLogs(data.habitLogs as HabitLog[]);
 }
 
 // Clear all data

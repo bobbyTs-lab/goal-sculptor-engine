@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useGoals } from '@/hooks/useGoals';
-import { generateId } from '@/lib/storage';
+import { useHabits } from '@/hooks/useHabits';
+import { generateId, loadGoalTemplates, GoalTemplate, saveGoalTemplates } from '@/lib/storage';
 import { Goal, calculateGoalProgress, calculatePhaseProgress, calculateTaskProgress, deriveTaskStatus, getDaysRemaining, getUrgencyClass, getUrgencyColor } from '@/types/goals';
+import { getCurrentStreak, isHabitCompletedOn, getTodayKey } from '@/lib/habits';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,16 +13,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle, Repeat, ToggleLeft } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, ChevronDown, ChevronRight, Trash2, Target, Copy, Sparkles, Clock, Upload, FileText, AlertCircle, Repeat, ToggleLeft, Flame, CheckCircle2, MessageSquare, Send, Bookmark, Archive, CalendarDays, ArrowUp, ArrowDown, Trophy, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProgressRing } from '@/components/ProgressRing';
+import { WeeklyFocus, FocusStar } from '@/components/WeeklyFocus';
 
 // --- Parser types ---
-interface ParsedHabit { title: string; frequency: string; target: string; }
-interface ParsedTodo { title: string; deadline: string; }
+import type { EffortLevel, HabitEvolution, AdaptationProtocol } from '@/types/goals';
+
+interface ParsedHabit { title: string; frequency: string; target: string; evolution?: HabitEvolution; }
+interface ParsedTodo { title: string; deadline: string; effort?: EffortLevel; isBenchmark?: boolean; }
 interface ParsedTask { title: string; description: string; deadline: string; todos: ParsedTodo[]; habits: ParsedHabit[]; }
 interface ParsedPhase { title: string; description: string; deadline: string; tasks: ParsedTask[]; }
-interface ParseResult { phases: ParsedPhase[]; warnings: string[]; }
+interface ParseResult { phases: ParsedPhase[]; warnings: string[]; adaptationProtocol?: AdaptationProtocol; }
 
 function parseAIResponse(text: string): ParseResult {
   const lines = text.split('\n');
@@ -28,11 +34,26 @@ function parseAIResponse(text: string): ParseResult {
   let currentPhase: ParsedPhase | null = null;
   let currentTask: ParsedTask | null = null;
   const warnings: string[] = [];
+  let adaptationProtocol: AdaptationProtocol | undefined;
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const trimmed = raw.trim();
     if (!trimmed) continue;
+
+    // Parse ADAPTATION PROTOCOL section
+    if (trimmed.startsWith('ADAPTATION PROTOCOL:') || trimmed === 'ADAPTATION PROTOCOL:') {
+      const proto: AdaptationProtocol = { ahead: '', behind: '', blocked: '' };
+      for (let j = i + 1; j < lines.length && j <= i + 10; j++) {
+        const line = lines[j]?.trim();
+        if (!line) continue;
+        if (line.startsWith('IF AHEAD:')) proto.ahead = line.replace('IF AHEAD:', '').trim();
+        else if (line.startsWith('IF BEHIND:')) proto.behind = line.replace('IF BEHIND:', '').trim();
+        else if (line.startsWith('IF BLOCKED:')) proto.blocked = line.replace('IF BLOCKED:', '').trim();
+      }
+      if (proto.ahead || proto.behind || proto.blocked) adaptationProtocol = proto;
+      break; // adaptation protocol is always at the end
+    }
 
     const phaseMatch = trimmed.match(/^PHASE:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
     if (phaseMatch) {
@@ -50,17 +71,31 @@ function parseAIResponse(text: string): ParseResult {
       continue;
     }
 
-    const todoMatch = trimmed.match(/^TODO:\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*$/);
+    // Updated TODO parser: supports effort tags [LOW], [MED], [HIGH]
+    const todoMatch = trimmed.match(/^TODO:\s*(.+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*(?:\|\s*\[(LOW|MED|HIGH)\]\s*)?$/);
     if (todoMatch) {
       if (!currentTask) { warnings.push(`Line ${i + 1}: TODO found before any TASK, skipped`); continue; }
-      currentTask.todos.push({ title: todoMatch[1].trim(), deadline: todoMatch[2] });
+      const title = todoMatch[1].trim();
+      const isBenchmark = /^Benchmark\s*[—–-]\s*/i.test(title);
+      currentTask.todos.push({
+        title,
+        deadline: todoMatch[2],
+        effort: (todoMatch[3] as EffortLevel) || undefined,
+        isBenchmark: isBenchmark || undefined,
+      });
       continue;
     }
 
-    const habitMatch = trimmed.match(/^HABIT:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*$/);
+    // Updated HABIT parser: supports evolution markers [NEW], [CARRY], [INCREASE], [REPLACE]
+    const habitMatch = trimmed.match(/^HABIT:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*(?:\|\s*\[(NEW|CARRY|INCREASE|REPLACE)\]\s*)?$/);
     if (habitMatch) {
       if (!currentTask) { warnings.push(`Line ${i + 1}: HABIT found before any TASK, skipped`); continue; }
-      currentTask.habits.push({ title: habitMatch[1].trim(), frequency: habitMatch[2].trim(), target: habitMatch[3].trim() });
+      currentTask.habits.push({
+        title: habitMatch[1].trim(),
+        frequency: habitMatch[2].trim(),
+        target: habitMatch[3].trim(),
+        evolution: (habitMatch[4] as HabitEvolution) || undefined,
+      });
       continue;
     }
   }
@@ -69,7 +104,7 @@ function parseAIResponse(text: string): ParseResult {
     warnings.push('No PHASE: lines found. Make sure the AI response follows the exact format.');
   }
 
-  return { phases, warnings };
+  return { phases, warnings, adaptationProtocol };
 }
 
 const statusColors: Record<string, string> = {
@@ -96,6 +131,50 @@ function DeadlineBadge({ deadline }: { deadline?: string }) {
   );
 }
 
+import type { GoalDomain } from '@/types/goals';
+
+const domainConfig: Record<GoalDomain, { label: string; color: string }> = {
+  PHYSICAL: { label: 'Physical', color: 'bg-red-500/15 text-red-400 border-red-500/30' },
+  CREATIVE: { label: 'Creative', color: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
+  PROFESSIONAL: { label: 'Professional', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+  INTELLECTUAL: { label: 'Intellectual', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+  LIFESTYLE: { label: 'Lifestyle', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+};
+
+function DomainBadge({ domain }: { domain?: GoalDomain }) {
+  if (!domain) return null;
+  const cfg = domainConfig[domain];
+  return <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${cfg.color}`}>{cfg.label}</Badge>;
+}
+
+const effortColors: Record<string, string> = {
+  LOW: 'bg-emerald-500',
+  MED: 'bg-amber-400',
+  HIGH: 'bg-red-500',
+};
+
+function EffortDot({ effort }: { effort?: EffortLevel }) {
+  if (!effort) return null;
+  return <span className={`inline-block h-2 w-2 rounded-full ${effortColors[effort]} flex-shrink-0`} title={`${effort} effort`} />;
+}
+
+const evolutionColors: Record<string, string> = {
+  NEW: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  CARRY: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+  INCREASE: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  REPLACE: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+};
+
+function EvolutionTag({ evolution }: { evolution?: HabitEvolution }) {
+  if (!evolution) return null;
+  return <Badge variant="outline" className={`text-[9px] px-1 py-0 ${evolutionColors[evolution]}`}>{evolution}</Badge>;
+}
+
+function isDeloadTask(title: string): boolean {
+  const lower = title.toLowerCase();
+  return lower.includes('deload') || lower.includes('recovery');
+}
+
 export default function GoalsPage() {
   const {
     goals, addGoal, updateGoal, deleteGoal,
@@ -103,10 +182,15 @@ export default function GoalsPage() {
     addTask, deleteTask,
     addToDo, toggleToDo, deleteToDo,
     addHabit, toggleHabit, deleteHabit,
+    addNote, deleteNote,
+    reorderPhases, reorderTasks, reorderTodos,
+    archiveGoal, cloneGoal, saveAsTemplate, createFromTemplate,
   } = useGoals();
+  const { logs: habitLogs, toggleCheckIn } = useHabits();
+  const today = getTodayKey();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
-  const [newGoal, setNewGoal] = useState({ title: '', description: '', endGoal: '', deadline: '' });
+  const [newGoal, setNewGoal] = useState({ title: '', description: '', endGoal: '', deadline: '', domain: '' as string });
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -120,6 +204,12 @@ export default function GoalsPage() {
   const [newTodoDeadline, setNewTodoDeadline] = useState('');
   const [addHabitTarget, setAddHabitTarget] = useState<{ goalId: string; phaseId: string; taskId: string } | null>(null);
   const [newHabit, setNewHabit] = useState({ title: '', frequency: 'daily', target: '' });
+  const [noteText, setNoteText] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templates, setTemplates] = useState<GoalTemplate[]>(() => loadGoalTemplates());
+  const [showArchived, setShowArchived] = useState(false);
+  const activeGoals = goals.filter(g => !g.archived);
+  const archivedGoals = goals.filter(g => g.archived);
   const [promptGoal, setPromptGoal] = useState<Goal | null>(null);
   const [aiResponseText, setAiResponseText] = useState('');
   const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
@@ -133,8 +223,8 @@ export default function GoalsPage() {
 
   const handleCreateGoal = () => {
     if (!newGoal.title.trim()) return;
-    addGoal(newGoal.title, newGoal.description, newGoal.endGoal, newGoal.deadline || undefined);
-    setNewGoal({ title: '', description: '', endGoal: '', deadline: '' });
+    addGoal(newGoal.title, newGoal.description, newGoal.endGoal, newGoal.deadline || undefined, (newGoal.domain as GoalDomain) || undefined);
+    setNewGoal({ title: '', description: '', endGoal: '', deadline: '', domain: '' });
     setShowNewGoal(false);
     toast.success('Goal created!');
   };
@@ -162,6 +252,25 @@ export default function GoalsPage() {
     setAddTodoTarget(null);
   };
 
+  const handleSpreadDeadlines = (goalId: string) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal || !goal.deadline || goal.phases.length === 0) return;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(goal.deadline);
+    end.setHours(0, 0, 0, 0);
+    const totalMs = end.getTime() - start.getTime();
+    if (totalMs <= 0) { toast.error('Deadline is in the past'); return; }
+    const stepMs = totalMs / goal.phases.length;
+
+    const updatedPhases = goal.phases.map((phase, i) => {
+      const phaseEnd = new Date(start.getTime() + stepMs * (i + 1));
+      return { ...phase, deadline: phaseEnd.toISOString().split('T')[0] };
+    });
+    updateGoal(goalId, { phases: updatedPhases });
+    toast.success(`Spread deadlines across ${goal.phases.length} phases`);
+  };
+
   const handleAddHabit = () => {
     if (!addHabitTarget || !newHabit.title.trim()) return;
     addHabit(addHabitTarget.goalId, addHabitTarget.phaseId, addHabitTarget.taskId, newHabit.title, newHabit.frequency, newHabit.target || undefined);
@@ -171,7 +280,9 @@ export default function GoalsPage() {
   };
 
   const generateAIPrompt = (goal: Goal) => {
-    const phaseList = goal.phases.map((p, i) => `  - Phase ${i + 1}: "${p.title}" — ${p.description}${p.deadline ? ` (deadline: ${p.deadline})` : ''}`).join('\n');
+    const phaseList = goal.phases.length > 0
+      ? goal.phases.map((p, i) => `  - Phase ${i + 1}: "${p.title}" — ${p.description}${p.deadline ? ` (deadline: ${p.deadline})` : ''}`).join('\n')
+      : null;
     const today = new Date().toISOString().split('T')[0];
     const deadline = goal.deadline || '(no deadline set)';
 
@@ -188,23 +299,77 @@ TODAY'S DATE: ${today}
 DEADLINE: ${deadline}
 
 EXISTING PHASES:
-${phaseList || '  (No phases yet — please generate 3-5 phases)'}
+${phaseList || `  - Phase 1: "Foundation" — Research, planning, and initial setup — lay the groundwork.
+  - Phase 2: "Development" — Build core skills, systems, and habits — do the main work.
+  - Phase 3: "Refinement" — Optimize, iterate, and fix gaps — sharpen what you've built.
+  - Phase 4: "Mastery" — Sustain, teach, and push limits — own the outcome.`}
 
 ═══════════════════════════════════════
-STEP 1 — INFORMATION GATHERING
+STEP 0 — GOAL CLASSIFICATION
 ═══════════════════════════════════════
 
-Before creating the plan, ask questions needed to design a high-quality plan.
+Before asking any questions, classify the goal into one of these domains:
 
-Ask about:
-- Current skill level or experience
-- Available time per week
-- Access to equipment, tools, or facilities
-- Access to mentors/coaches
-- Constraints or risks
-- Relevant physical or mental prerequisites
-- Environment where the work will occur
-- Whether the goal is casual, serious, or elite level
+- PHYSICAL (fitness, sport, body composition, endurance, martial arts)
+- CREATIVE (music, art, writing, design, content creation)
+- PROFESSIONAL (career, business, certifications, income)
+- INTELLECTUAL (learning, languages, academic, technical skills)
+- LIFESTYLE (habits, relationships, finance, organization, wellness)
+
+This classification determines:
+1. Which intake questions to ask (Step 1)
+2. How to weight phase durations (Step 2)
+3. Which support pillars to include (nutrition, recovery, tools, etc.)
+4. What benchmark checkpoints look like
+
+State the classification before asking questions.
+
+═══════════════════════════════════════
+STEP 1 — DOMAIN-SPECIFIC INFORMATION GATHERING
+═══════════════════════════════════════
+
+Ask questions tailored to the goal's domain. Do NOT ask generic filler questions. Every question must directly impact plan design.
+
+ALWAYS ASK (all domains):
+- Current skill level or experience with this specific goal
+- Available time per week (be specific: hours per day, days per week)
+- Hard constraints (injuries, budget limits, schedule locks, family obligations)
+- Ambition level: casual, serious, or elite-level pursuit
+- Access to coaching, mentorship, or community
+
+PHYSICAL DOMAIN — also ask:
+- Current baseline numbers (distances, times, weights, body metrics)
+- Injury history and current physical limitations
+- Access to facilities (gym, pool, track, open water, etc.)
+- Equipment owned vs. needed
+- Current nutrition habits (rough protein intake, meal frequency)
+- Sleep quality and average hours
+- Prior training history (years, sports, consistency)
+
+CREATIVE DOMAIN — also ask:
+- Current portfolio or body of work (even if informal)
+- Tools/software/instruments owned
+- Inspiration sources or target style
+- Whether output is for personal satisfaction or public/commercial use
+
+PROFESSIONAL DOMAIN — also ask:
+- Current role and years of experience
+- Target role, income, or milestone
+- Industry and market conditions
+- Existing network or connections
+- Certifications or credentials needed
+
+INTELLECTUAL DOMAIN — also ask:
+- Learning style preference (reading, video, hands-on, tutored)
+- Prior attempts at this or related topics
+- Available learning resources (courses, books, subscriptions)
+- Whether there's a formal assessment (exam, certification, portfolio)
+
+LIFESTYLE DOMAIN — also ask:
+- What triggered this goal now
+- Prior attempts and why they failed
+- Support system (partner, friends, accountability)
+- Environmental factors (living situation, work schedule)
 
 Wait for the user's answers before continuing.
 Do NOT generate the plan yet.
@@ -215,7 +380,16 @@ STEP 2 — PLAN DESIGN
 
 After receiving answers, generate the full plan.
 
-The plan must follow this progression model:
+PHASE WEIGHTING — Phases do NOT need to be equal length. Weight them based on the goal domain:
+- PHYSICAL goals: Foundation 15%, Development 50%, Refinement 25%, Mastery 10%
+- CREATIVE goals: Foundation 10%, Development 40%, Refinement 35%, Mastery 15%
+- PROFESSIONAL goals: Foundation 20%, Development 35%, Refinement 30%, Mastery 15%
+- INTELLECTUAL goals: Foundation 15%, Development 45%, Refinement 25%, Mastery 15%
+- LIFESTYLE goals: Foundation 20%, Development 40%, Refinement 25%, Mastery 15%
+
+Adjust based on experience level — beginners need longer Foundation, advanced users can compress it.
+
+PROGRESSION MODEL:
 1. Understanding / knowledge
 2. Prerequisite skills or preparation
 3. Guided or assisted attempts
@@ -224,70 +398,100 @@ The plan must follow this progression model:
 6. Variation and adaptation
 7. Performance mastery
 
-TODO RULES — TODO items must:
-- Be completable in a single uninterrupted session
-- Take approximately 5–60 minutes
+SUPPORT PILLARS — Based on goal domain, include relevant support systems as habits:
+- PHYSICAL: Nutrition, sleep, recovery/mobility, mental prep
+- CREATIVE: Inspiration intake, feedback loops, tool mastery, creative rest
+- PROFESSIONAL: Networking, personal branding, skill stacking, mentorship
+- INTELLECTUAL: Spaced repetition, practice testing, note systems, teaching others
+- LIFESTYLE: Environment design, accountability, tracking, reward systems
+
+═══════════════════════════════════════
+BENCHMARK CHECKPOINTS
+═══════════════════════════════════════
+
+Every phase must include at least ONE benchmark checkpoint — a specific test or measurement that proves progress. Benchmarks are formatted as TODOs that start with "Benchmark —".
+
+Examples:
+- PHYSICAL: "Benchmark — Complete a timed 5K run, target sub-30 minutes"
+- CREATIVE: "Benchmark — Record and share a 60-second performance clip for peer feedback"
+- PROFESSIONAL: "Benchmark — Complete a mock interview and score 7+/10 on rubric"
+
+═══════════════════════════════════════
+RECOVERY AND ADAPTATION PROTOCOL
+═══════════════════════════════════════
+
+PHYSICAL GOALS — Include deload/recovery periods every 3-4 weeks as a TASK with reduced-intensity TODOs.
+
+ALL GOALS — Include an adaptation note at the end:
+- IF AHEAD OF SCHEDULE: Guidance on how to compress or add stretch goals
+- IF BEHIND SCHEDULE: Which tasks to prioritize and which to cut
+- IF INJURED/BLOCKED: Alternative actions that maintain momentum
+
+═══════════════════════════════════════
+TODO RULES
+═══════════════════════════════════════
+
+TODO items must:
+- Be completable in a single uninterrupted session (5–60 minutes)
 - Represent one concrete action
 - NOT represent habits or ongoing routines
-- NOT represent vague ideas like "practice more"
-Good: "Record video of 3 attempts", "Watch 2 instructional videos", "Write summary of technique"
-Bad: "Practice daily", "Train for a month", "Improve strength"
-If a TODO is larger than a single session, break it into smaller TODOs.
+- Include an effort tag: [LOW], [MED], or [HIGH]
 
-HABIT RULES — HABIT items represent ongoing routines, regimens, or recurring practices tied to a task:
+Format: TODO: Task title | YYYY-MM-DD | [EFFORT]
+
+═══════════════════════════════════════
+HABIT RULES
+═══════════════════════════════════════
+
+HABIT items represent ongoing routines tied to a task:
 - Must be specific, measurable recurring actions
-- Include a clear frequency (daily, 3x/week, weekdays, etc.)
-- Include a clear target or metric (200g protein, 30 minutes, 5 sets, etc.)
-- Habits evolve task-by-task — they can be introduced, modified, or intensified as the plan progresses
-- Each task should include habits that are appropriate for that stage of development
-Good: "Eat 200g protein | daily | 200g minimum", "Practice chord transitions | daily | 30 minutes", "Mobility stretching | daily | 15 minutes"
-Bad: "Be healthy", "Practice more", "Eat well"
+- Include frequency, target, and evolution marker
 
-TASK RULES — Tasks must:
+HABIT EVOLUTION — For each task, mark habits as:
+- [NEW] — introduced for the first time
+- [CARRY] — continues unchanged from previous task
+- [INCREASE] — increases in volume/intensity (state new target)
+- [REPLACE] — swapped for a more advanced version
+
+Format: HABIT: title | frequency | target | [EVOLUTION]
+
+═══════════════════════════════════════
+TASK RULES
+═══════════════════════════════════════
+
+Tasks must:
 - Represent measurable capability milestones
 - Include numbers or clear success criteria
-- Represent meaningful progress toward the goal
-- Include both one-off TODOs (actionable steps) AND ongoing HABITs (regimens to maintain)
-Good: "Land first assisted backflip", "Hold a 2-minute plank"
-Bad: "Improve technique", "Work on strength"
+- Include both one-off TODOs AND ongoing HABITs
 
-TIME RULES:
-- Every TODO item MUST have a deadline in YYYY-MM-DD format.
-- Phase deadlines divide the total timeline (\${today} to \${deadline}) roughly evenly.
-- Task deadlines fall within their phase.
-- Todo deadlines fall within their task.
-- Deadlines should progress logically and steadily.
-- HABIT items do NOT have deadlines — they are ongoing.
+═══════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════
 
-PLAN QUALITY — Before producing the final plan, internally verify that:
-- Progression makes logical sense
-- Tasks represent real milestones
-- Todos are atomic single-session actions
-- Habits are specific, measurable recurring actions
-- Habits evolve appropriately across tasks (e.g., protein target increases, practice duration grows)
-- No vague wording is used
-- Nothing requires multiple sessions
-
-OUTPUT FORMAT — You MUST use this exact format:
+You MUST use this exact format:
 
 PHASE: Phase Title | Phase description | YYYY-MM-DD
   TASK: Task Title | Task description | YYYY-MM-DD
-    TODO: Todo item title | YYYY-MM-DD
-    TODO: Another todo item | YYYY-MM-DD
-    HABIT: Habit title | frequency | target
-    HABIT: Another habit | daily | 30 minutes
+    TODO: Todo item title | YYYY-MM-DD | [EFFORT]
+    TODO: Benchmark — Description of test | YYYY-MM-DD | [HIGH]
+    HABIT: Habit title | frequency | target | [EVOLUTION MARKER]
   TASK: Another Task | Description here | YYYY-MM-DD
-    TODO: Sub-item | YYYY-MM-DD
-    HABIT: Evolved habit | daily | 45 minutes
+    TODO: Another item | YYYY-MM-DD | [MED]
+    HABIT: Evolved habit | daily | 45 minutes | [INCREASE from 30 min]
+
+ADAPTATION PROTOCOL:
+  IF AHEAD: [specific guidance]
+  IF BEHIND: [specific guidance]
+  IF BLOCKED: [specific alternative actions]
 
 RULES:
 - Lines must start with PHASE:, TASK:, TODO:, or HABIT:
-- Maintain indentation
 - Use | (pipe) to separate fields
-- TODO dates MUST be YYYY-MM-DD
-- HABIT lines have 3 fields: title | frequency | target
-- Do NOT add explanations or commentary
-- Output ONLY the plan`;
+- TODO effort tags MUST be [LOW], [MED], or [HIGH]
+- HABIT lines have 4 fields: title | frequency | target | [evolution marker]
+- Benchmark TODOs start with "Benchmark —"
+- Do NOT add explanations or commentary outside the format
+- Output ONLY the plan followed by the ADAPTATION PROTOCOL`;
   };
 
   const copyPrompt = (goal: Goal) => {
@@ -298,8 +502,12 @@ RULES:
   const handleParseResponse = () => {
     const result = parseAIResponse(aiResponseText);
     setParsedResult(result);
-    if (result.phases.length > 0) {
-      toast.success(`Parsed ${result.phases.length} phases!`);
+    if (result.phases.length === 0) {
+      toast.error('No phases found — check the format and try again.');
+    } else if (result.warnings.length > 0) {
+      toast.warning(`Parsed ${result.phases.length} phase${result.phases.length !== 1 ? 's' : ''} with ${result.warnings.length} warning${result.warnings.length !== 1 ? 's' : ''} — review before importing`);
+    } else {
+      toast.success(`Parsed ${result.phases.length} phase${result.phases.length !== 1 ? 's' : ''}!`);
     }
   };
 
@@ -326,6 +534,8 @@ RULES:
           done: false,
           order: tdi,
           deadline: ptd.deadline,
+          effort: ptd.effort,
+          isBenchmark: ptd.isBenchmark,
         })),
         habits: (pt.habits || []).map(ph => ({
           id: generateId(),
@@ -333,6 +543,7 @@ RULES:
           frequency: ph.frequency,
           target: ph.target,
           active: true,
+          evolution: ph.evolution,
         })),
       }));
 
@@ -359,7 +570,10 @@ RULES:
       }
     }
 
-    updateGoal(promptGoal.id, { phases: updatedPhases });
+    updateGoal(promptGoal.id, {
+      phases: updatedPhases,
+      ...(parsedResult.adaptationProtocol && { adaptationProtocol: parsedResult.adaptationProtocol }),
+    });
     const totalHabitsAll = parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0);
     toast.success(`Imported ${parsedResult.phases.length} phases, ${totalTasks} tasks, ${totalTodos} todos, ${totalHabitsAll} habits!`);
     setParsedResult(null);
@@ -368,27 +582,32 @@ RULES:
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-violet w-80 h-80 -top-20 -left-20" />
-      <div className="section-circle circle-violet w-36 h-36 bottom-20 -right-12 opacity-[0.06]" />
-      <div className="circle-ring w-28 h-28 top-40 right-4" style={{ color: 'hsl(270 60% 60%)' }} />
-      <div className="circle-ring-filled w-10 h-10 bottom-40 left-8" style={{ color: 'hsl(270 60% 60%)' }} />
-
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between relative z-10">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Goals</h1>
           <p className="text-muted-foreground mt-0.5 text-xs md:text-sm">
-            {goals.length} goal{goals.length !== 1 ? 's' : ''} active
+            {activeGoals.length} goal{activeGoals.length !== 1 ? 's' : ''} active
+            {archivedGoals.length > 0 && (
+              <button onClick={() => setShowArchived(!showArchived)} className="ml-2 text-primary hover:underline">
+                {showArchived ? 'Hide' : 'Show'} {archivedGoals.length} archived
+              </button>
+            )}
           </p>
         </div>
-        <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
-          <DialogTrigger asChild>
-            <Button className="font-semibold">
-              <Plus className="h-4 w-4 mr-2" /> New Goal
+        <div className="flex gap-2">
+          {templates.length > 0 && (
+            <Button variant="outline" onClick={() => setShowTemplates(true)}>
+              <Bookmark className="h-4 w-4 mr-2" /> Templates
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={showNewGoal} onOpenChange={setShowNewGoal}>
+            <DialogTrigger asChild>
+              <Button className="font-semibold">
+                <Plus className="h-4 w-4 mr-2" /> New Goal
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">Create New Goal</DialogTitle>
@@ -410,27 +629,52 @@ RULES:
                 <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Deadline</label>
                 <Input type="date" value={newGoal.deadline} onChange={e => setNewGoal({ ...newGoal, deadline: e.target.value })} className="mt-1" />
               </div>
+              <div>
+                <label className="text-sm text-muted-foreground uppercase tracking-wider font-medium">Domain (optional)</label>
+                <Select value={newGoal.domain} onValueChange={v => setNewGoal({ ...newGoal, domain: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Auto-detected by AI" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PHYSICAL">Physical</SelectItem>
+                    <SelectItem value="CREATIVE">Creative</SelectItem>
+                    <SelectItem value="PROFESSIONAL">Professional</SelectItem>
+                    <SelectItem value="INTELLECTUAL">Intellectual</SelectItem>
+                    <SelectItem value="LIFESTYLE">Lifestyle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button onClick={handleCreateGoal} className="w-full font-semibold">Create Goal</Button>
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
+      {/* Weekly Focus */}
+      <WeeklyFocus goals={goals} />
+
       {/* Goals List */}
-      {goals.length === 0 ? (
+      {activeGoals.length === 0 && archivedGoals.length === 0 ? (
         <Card className="border-dashed border-2 border-primary/20">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Target className="h-16 w-16 text-primary/30 mb-4" />
-            <p className="text-muted-foreground text-lg">No goals yet. Create your first goal to begin!</p>
+          <CardContent className="flex flex-col items-center justify-center py-12 space-y-3">
+            <Target className="h-12 w-12 text-primary/30" />
+            <div className="text-center">
+              <p className="text-foreground font-semibold text-lg">No goals yet</p>
+              <p className="text-muted-foreground text-sm mt-1 max-w-xs mx-auto">
+                Goals are broken into Phases, Tasks, and To-Dos. Start with your first goal and build from there.
+              </p>
+            </div>
+            <Button onClick={() => setShowNewGoal(true)} className="font-semibold mt-2">
+              <Plus className="h-4 w-4 mr-2" /> Create Your First Goal
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        goals.map((goal) => {
+        [...activeGoals, ...(showArchived ? archivedGoals : [])].map((goal) => {
           const progress = calculateGoalProgress(goal);
           const isExpanded = expandedGoals.has(goal.id);
           const goalDays = getDaysRemaining(goal.deadline);
           return (
-            <Card key={goal.id} className={`shadow-sm ${getUrgencyClass(goalDays)}`}>
+            <Card key={goal.id} className={`shadow-sm ${getUrgencyClass(goalDays)} ${goal.archived ? 'opacity-60' : ''}`}>
               <Collapsible open={isExpanded} onOpenChange={() => toggle(expandedGoals, goal.id, setExpandedGoals)}>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -438,7 +682,11 @@ RULES:
                       <div className="flex items-center gap-3">
                         {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                         <div>
-                          <CardTitle className="text-lg">{goal.title}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-lg">{goal.title}</CardTitle>
+                            <DomainBadge domain={goal.domain} />
+                            <FocusStar goalId={goal.id} goals={goals} />
+                          </div>
                           <div className="flex items-center gap-3 mt-1">
                             <p className="text-sm text-muted-foreground">{goal.description}</p>
                             <DeadlineBadge deadline={goal.deadline} />
@@ -458,6 +706,35 @@ RULES:
                       <p className="text-sm">{goal.endGoal}</p>
                     </div>
 
+                    {/* Adaptation Protocol */}
+                    {goal.adaptationProtocol && (
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <div className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-accent/30 transition-colors">
+                            <Info className="h-4 w-4 text-blue-400" />
+                            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Adaptation Protocol</span>
+                            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="grid gap-2 ml-6 mt-1">
+                            <div className="p-2.5 rounded-md bg-emerald-500/5 border border-emerald-500/20">
+                              <p className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-0.5">If Ahead</p>
+                              <p className="text-xs text-foreground/80">{goal.adaptationProtocol.ahead}</p>
+                            </div>
+                            <div className="p-2.5 rounded-md bg-amber-500/5 border border-amber-500/20">
+                              <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-0.5">If Behind</p>
+                              <p className="text-xs text-foreground/80">{goal.adaptationProtocol.behind}</p>
+                            </div>
+                            <div className="p-2.5 rounded-md bg-red-500/5 border border-red-500/20">
+                              <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wider mb-0.5">If Blocked</p>
+                              <p className="text-xs text-foreground/80">{goal.adaptationProtocol.blocked}</p>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
                     {/* Action buttons */}
                     <div className="flex gap-2 flex-wrap">
                       <Button size="sm" variant="outline" onClick={() => setAddPhaseGoalId(goal.id)}>
@@ -466,27 +743,46 @@ RULES:
                       <Button size="sm" variant="outline" onClick={() => { setPromptGoal(goal); }}>
                         <Sparkles className="h-3 w-3 mr-1" /> AI Prompt
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => deleteGoal(goal.id)}>
+                      {goal.deadline && (
+                        <Button size="sm" variant="outline" onClick={() => handleSpreadDeadlines(goal.id)}>
+                          <CalendarDays className="h-3 w-3 mr-1" /> Spread Deadlines
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => { cloneGoal(goal.id); toast.success('Goal cloned!'); }}>
+                        <Copy className="h-3 w-3 mr-1" /> Clone
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { saveAsTemplate(goal.id); toast.success('Saved as template!'); }}>
+                        <Bookmark className="h-3 w-3 mr-1" /> Template
+                      </Button>
+                      <Button size="sm" variant="ghost" className="ml-auto" onClick={() => { archiveGoal(goal.id); toast.success(goal.archived ? 'Goal restored!' : 'Goal archived!'); }}>
+                        <Archive className="h-3 w-3 mr-1" /> {goal.archived ? 'Restore' : 'Archive'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteGoal(goal.id)}>
                         <Trash2 className="h-3 w-3 mr-1" /> Delete
                       </Button>
                     </div>
 
                     {/* Phases */}
-                    {goal.phases.map(phase => {
+                    {goal.phases.map((phase, phaseIdx) => {
                       const phaseProgress = calculatePhaseProgress(phase);
                       const phaseExpanded = expandedPhases.has(phase.id);
                       return (
-                        <Collapsible key={phase.id} open={phaseExpanded} onOpenChange={() => toggle(expandedPhases, phase.id, setExpandedPhases)}>
+                        <div key={phase.id}>
+                        <Collapsible open={phaseExpanded} onOpenChange={() => toggle(expandedPhases, phase.id, setExpandedPhases)}>
                           <div className="ml-4 border-l-2 border-primary/20 pl-4">
                             <CollapsibleTrigger asChild>
-                              <div className="flex items-center justify-between cursor-pointer hover:bg-accent/30 p-2 rounded-lg transition-colors">
+                              <div className="group flex items-center justify-between cursor-pointer hover:bg-accent/30 p-2 rounded-lg transition-colors">
                                 <div className="flex items-center gap-2">
                                   {phaseExpanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                   <span className="font-semibold">{phase.title}</span>
                                   <ProgressRing value={phaseProgress} size={28} strokeWidth={2.5} />
                                   <DeadlineBadge deadline={phase.deadline} />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex flex-col">
+                                    <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={(e) => { e.stopPropagation(); reorderPhases(goal.id, phase.id, 'up'); }}><ArrowUp className="h-2.5 w-2.5" /></Button>
+                                    <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={(e) => { e.stopPropagation(); reorderPhases(goal.id, phase.id, 'down'); }}><ArrowDown className="h-2.5 w-2.5" /></Button>
+                                  </div>
                                   <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setAddTaskTarget({ goalId: goal.id, phaseId: phase.id }); }}>
                                     <Plus className="h-3 w-3 mr-1" /> Task
                                   </Button>
@@ -503,17 +799,18 @@ RULES:
                                 const taskExpanded = expandedTasks.has(task.id);
                                 return (
                                   <Collapsible key={task.id} open={taskExpanded} onOpenChange={() => toggle(expandedTasks, task.id, setExpandedTasks)}>
-                                    <div className="ml-4 border-l border-border pl-3 mt-2">
+                                    <div className={`ml-4 border-l pl-3 mt-2 ${isDeloadTask(task.title) ? 'border-emerald-500/40' : 'border-border'}`}>
                                       <CollapsibleTrigger asChild>
-                                        <div className="flex items-center justify-between cursor-pointer hover:bg-accent/20 p-1.5 rounded-lg transition-colors">
+                                        <div className={`group/task flex items-center justify-between cursor-pointer p-1.5 rounded-lg transition-colors ${isDeloadTask(task.title) ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : 'hover:bg-accent/20'}`}>
                                           <div className="flex items-center gap-2">
                                             {taskExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                            <span className="text-sm">{task.title}</span>
-                                            <Badge className={`text-xs ${statusColors[status]}`}>{statusLabels[status]}</Badge>
-                                            <span className="text-xs text-muted-foreground">{taskProgress}%</span>
+                                            <span className={`text-sm ${isDeloadTask(task.title) ? 'text-emerald-400' : ''}`}>{task.title}</span>
+                                            <Badge className={`text-xs ${statusColors[status]}`}>{statusLabels[status]} {taskProgress}%</Badge>
                                             <DeadlineBadge deadline={task.deadline} />
                                           </div>
-                                          <div className="flex gap-1">
+                                          <div className="flex gap-0.5 items-center opacity-0 group-hover/task:opacity-100 transition-opacity">
+                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); reorderTasks(goal.id, phase.id, task.id, 'up'); }}><ArrowUp className="h-2.5 w-2.5" /></Button>
+                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); reorderTasks(goal.id, phase.id, task.id, 'down'); }}><ArrowDown className="h-2.5 w-2.5" /></Button>
                                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Add to-do" onClick={(e) => { e.stopPropagation(); setAddTodoTarget({ goalId: goal.id, phaseId: phase.id, taskId: task.id }); }}>
                                               <Plus className="h-3 w-3" />
                                             </Button>
@@ -530,12 +827,14 @@ RULES:
                                         <div className="ml-5 mt-1 space-y-1">
                                           {/* To-Dos */}
                                           {task.todos.map(todo => (
-                                            <div key={todo.id} className="flex items-center gap-2 group">
+                                            <div key={todo.id} className={`flex items-center gap-2 group ${todo.isBenchmark ? 'bg-amber-500/5 rounded-md px-1.5 py-0.5 -mx-1.5' : ''}`}>
                                               <Checkbox
                                                 checked={todo.done}
                                                 onCheckedChange={() => toggleToDo(goal.id, phase.id, task.id, todo.id)}
                                               />
-                                              <span className={`text-sm ${todo.done ? 'line-through text-muted-foreground' : ''}`}>{todo.title}</span>
+                                              {todo.isBenchmark && <Trophy className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />}
+                                              <EffortDot effort={todo.effort} />
+                                              <span className={`text-sm ${todo.done ? 'line-through text-muted-foreground' : ''} ${todo.isBenchmark ? 'font-medium' : ''}`}>{todo.title}</span>
                                               <DeadlineBadge deadline={todo.deadline} />
                                               <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteToDo(goal.id, phase.id, task.id, todo.id)}>
                                                 <Trash2 className="h-3 w-3" />
@@ -552,19 +851,98 @@ RULES:
                                               <p className="text-[10px] text-amber uppercase tracking-widest font-semibold mb-1 flex items-center gap-1">
                                                 <Repeat className="h-3 w-3" /> Habits & Regimens
                                               </p>
-                                              {(task.habits || []).map(habit => (
+                                              {(task.habits || []).map(habit => {
+                                                const completed = isHabitCompletedOn(habit.id, today, habitLogs);
+                                                const streak = getCurrentStreak(habit.id, habitLogs);
+                                                return (
                                                 <div key={habit.id} className="flex items-center gap-2 group py-0.5">
-                                                  <ToggleLeft className={`h-3.5 w-3.5 flex-shrink-0 cursor-pointer ${habit.active ? 'text-amber' : 'text-muted-foreground'}`} onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)} />
-                                                  <span className={`text-sm ${!habit.active ? 'line-through text-muted-foreground' : ''}`}>{habit.title}</span>
+                                                  {habit.active && (
+                                                    <Checkbox
+                                                      checked={completed}
+                                                      onCheckedChange={() => toggleCheckIn(habit.id)}
+                                                      className="border-amber data-[state=checked]:bg-amber data-[state=checked]:border-amber"
+                                                    />
+                                                  )}
+                                                  {!habit.active && (
+                                                    <ToggleLeft className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer text-muted-foreground" onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)} />
+                                                  )}
+                                                  <span className={`text-sm ${completed ? 'text-muted-foreground' : ''} ${!habit.active ? 'line-through text-muted-foreground' : ''}`}>{habit.title}</span>
                                                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber/10 border-amber/30 text-amber">{habit.frequency}</Badge>
                                                   {habit.target && <span className="text-[10px] text-muted-foreground">{habit.target}</span>}
-                                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteHabit(goal.id, phase.id, task.id, habit.id)}>
-                                                    <Trash2 className="h-3 w-3" />
-                                                  </Button>
+                                                  <EvolutionTag evolution={habit.evolution} />
+                                                  {streak > 0 && habit.active && (
+                                                    <span className="text-[10px] font-medium text-amber flex items-center gap-0.5">
+                                                      <Flame className="h-3 w-3" />{streak}d
+                                                    </span>
+                                                  )}
+                                                  <div className="flex gap-0.5 ml-auto opacity-0 group-hover:opacity-100">
+                                                    {habit.active && (
+                                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-muted-foreground" title="Deactivate" onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                        <ToggleLeft className="h-3 w-3" />
+                                                      </Button>
+                                                    )}
+                                                    {!habit.active && (
+                                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-amber" title="Activate" onClick={() => toggleHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                        <ToggleLeft className="h-3 w-3" />
+                                                      </Button>
+                                                    )}
+                                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-destructive" onClick={() => deleteHabit(goal.id, phase.id, task.id, habit.id)}>
+                                                      <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                  </div>
                                                 </div>
-                                              ))}
+                                                );
+                                              })}
                                             </div>
                                           )}
+
+                                          {/* Notes / Journal */}
+                                          <div className="mt-2 pt-2 border-t border-border/50">
+                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1 flex items-center gap-1">
+                                              <MessageSquare className="h-3 w-3" /> Notes
+                                            </p>
+                                            {(task.notes || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(note => (
+                                              <div key={note.id} className="flex items-start gap-2 group py-1">
+                                                <div className="flex-1">
+                                                  <p className="text-sm">{note.text}</p>
+                                                  <p className="text-[9px] text-muted-foreground">
+                                                    {new Date(note.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                  </p>
+                                                </div>
+                                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive flex-shrink-0" onClick={() => deleteNote(goal.id, phase.id, task.id, note.id)}>
+                                                  <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                            <div className="flex gap-1 mt-1">
+                                              <Input
+                                                placeholder="Add a note..."
+                                                value={noteText}
+                                                onChange={e => setNoteText(e.target.value)}
+                                                className="h-7 text-xs"
+                                                onKeyDown={e => {
+                                                  if (e.key === 'Enter' && noteText.trim()) {
+                                                    addNote(goal.id, phase.id, task.id, noteText.trim());
+                                                    setNoteText('');
+                                                  }
+                                                }}
+                                              />
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 w-7 p-0"
+                                                disabled={!noteText.trim()}
+                                                onClick={() => {
+                                                  if (noteText.trim()) {
+                                                    addNote(goal.id, phase.id, task.id, noteText.trim());
+                                                    setNoteText('');
+                                                  }
+                                                }}
+                                              >
+                                                <Send className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          </div>
                                         </div>
                                       </CollapsibleContent>
                                     </div>
@@ -577,6 +955,10 @@ RULES:
                             </CollapsibleContent>
                           </div>
                         </Collapsible>
+                        {phaseIdx < goal.phases.length - 1 && (
+                          <div className="h-px bg-border/50 ml-4 my-1" />
+                        )}
+                        </div>
                       );
                     })}
                   </CardContent>
@@ -757,14 +1139,65 @@ RULES:
                 )}
 
                 {parsedResult && parsedResult.phases.length > 0 && (
-                  <Button onClick={handleBulkImport} className="w-full font-semibold">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import All — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0)} habits
+                  <Button
+                    onClick={handleBulkImport}
+                    className="w-full font-semibold"
+                    variant={parsedResult.warnings.length > 0 ? 'outline' : 'default'}
+                  >
+                    {parsedResult.warnings.length > 0
+                      ? <AlertCircle className="h-4 w-4 mr-2 text-destructive" />
+                      : <Upload className="h-4 w-4 mr-2" />
+                    }
+                    {parsedResult.warnings.length > 0 ? 'Import Anyway' : 'Import All'} — {parsedResult.phases.length} phases, {parsedResult.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + t.todos.length, 0), 0)} todos, {parsedResult.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.habits || []).length, 0), 0)} habits
                   </Button>
                 )}
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Templates Dialog */}
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Bookmark className="h-5 w-5 text-violet" /> Goal Templates
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2 max-h-[60vh] overflow-auto">
+            {templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No templates yet. Save a goal as a template to get started.</p>
+            ) : (
+              templates.map(tmpl => (
+                <div key={tmpl.id} className="border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{tmpl.name}</p>
+                      <p className="text-xs text-muted-foreground">{tmpl.phases.length} phases, {tmpl.phases.reduce((s, p) => s + p.tasks.length, 0)} tasks</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" onClick={() => {
+                        createFromTemplate(tmpl);
+                        setShowTemplates(false);
+                        toast.success('Goal created from template!');
+                      }}>
+                        <Plus className="h-3 w-3 mr-1" /> Use
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => {
+                        const updated = templates.filter(t => t.id !== tmpl.id);
+                        setTemplates(updated);
+                        saveGoalTemplates(updated);
+                        toast.success('Template deleted');
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

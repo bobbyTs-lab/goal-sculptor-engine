@@ -1,14 +1,20 @@
 import { useGoals } from '@/hooks/useGoals';
 import { useWorkouts } from '@/hooks/useWorkouts';
+import { useHabits } from '@/hooks/useHabits';
 import { getPersonalRecords, getWeeklyVolume } from '@/lib/progressive-overload';
 import { EXERCISE_LABELS } from '@/types/workout';
+import { calculateGoalProgress, getDaysRemaining, getUrgencyColor } from '@/types/goals';
 import { checkAchievements } from '@/lib/achievements';
-import { Target, Dumbbell, Trophy, TrendingUp, Settings, Moon } from 'lucide-react';
+import { getTodaysHabits } from '@/lib/habits';
+import { Target, Dumbbell, Trophy, TrendingUp, Settings, Moon, Flame, CheckCircle2, ChevronRight, Clock, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BodyDiagram } from '@/components/BodyDiagram';
 import { loadSettings, loadAchievements, loadWeeklyPlan } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ProgressRing } from '@/components/ProgressRing';
+import { HabitHeatmap } from '@/components/HabitHeatmap';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 
@@ -22,14 +28,35 @@ function getGreeting(): string {
 }
 
 export default function Index() {
-  const { goals } = useGoals();
+  const { goals, toggleToDo } = useGoals();
   const { sessions } = useWorkouts();
+  const { logs: habitLogs, toggleCheckIn } = useHabits();
   const prs = getPersonalRecords(sessions);
   const weeklyVolume = getWeeklyVolume(sessions);
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
   const unlockedAchievements = loadAchievements();
   const { all: achievements } = checkAchievements(sessions, unlockedAchievements);
   const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const todaysHabits = useMemo(() => getTodaysHabits(goals, habitLogs), [goals, habitLogs]);
+  const habitsCompleted = todaysHabits.filter(h => h.completed).length;
+
+  const dueSoonTodos = useMemo(() => {
+    const todos: { todoId: string; title: string; goalId: string; goalTitle: string; phaseId: string; taskId: string; days: number }[] = [];
+    goals.forEach(g => {
+      g.phases.forEach(p => {
+        p.tasks.forEach(t => {
+          t.todos.forEach(td => {
+            if (td.done) return;
+            const days = getDaysRemaining(td.deadline);
+            if (days !== null && days <= 7) {
+              todos.push({ todoId: td.id, title: td.title, goalId: g.id, goalTitle: g.title, phaseId: p.id, taskId: t.id, days });
+            }
+          });
+        });
+      });
+    });
+    return todos.sort((a, b) => a.days - b.days).slice(0, 5);
+  }, [goals]);
 
   const todayPlan = useMemo(() => {
     const plan = loadWeeklyPlan();
@@ -46,14 +73,7 @@ export default function Index() {
   ];
 
   return (
-    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="section-circle circle-coral w-96 h-96 -top-24 -right-24" />
-      <div className="section-circle circle-coral w-48 h-48 bottom-40 -left-20 opacity-[0.06]" />
-      <div className="circle-ring w-32 h-32 top-20 left-4 text-coral" style={{ color: 'hsl(12 80% 65%)' }} />
-      <div className="circle-ring w-16 h-16 top-60 right-10" style={{ color: 'hsl(12 80% 65%)' }} />
-      <div className="circle-ring-filled w-6 h-6 bottom-60 right-8" style={{ color: 'hsl(12 80% 65%)' }} />
-
+    <div className="max-w-lg mx-auto px-4 pb-8 space-y-6">
       {/* Greeting Bar */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -70,6 +90,27 @@ export default function Index() {
           </Button>
         </Link>
       </motion.div>
+
+      {/* Welcome Card (empty state) */}
+      {goals.length === 0 && sessions.length === 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <div className="rounded-xl bg-card border border-border p-5 shadow-sm text-center space-y-3">
+            <Target className="h-8 w-8 mx-auto text-primary" />
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Welcome to Telos</h2>
+              <p className="text-sm text-muted-foreground mt-1">Start by creating a goal or setting up your weekly program.</p>
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Link to="/goals">
+                <Button size="sm" className="font-semibold">Create a Goal</Button>
+              </Link>
+              <Link to="/program">
+                <Button size="sm" variant="outline">Set Up Program</Button>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Today's Workout Card */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
@@ -133,8 +174,121 @@ export default function Index() {
         ))}
       </motion.div>
 
+      {/* Today's Habits */}
+      {todaysHabits.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Today's Habits</p>
+                <p className="text-sm font-medium text-foreground mt-0.5">
+                  {habitsCompleted}/{todaysHabits.length} completed
+                </p>
+              </div>
+              {habitsCompleted === todaysHabits.length && todaysHabits.length > 0 && (
+                <CheckCircle2 className="h-5 w-5 text-teal" />
+              )}
+            </div>
+            <div className="space-y-2">
+              {todaysHabits.map(({ habit, goalTitle, completed, streak }) => (
+                <div key={habit.id} className="flex items-center gap-2.5">
+                  <Checkbox
+                    checked={completed}
+                    onCheckedChange={() => toggleCheckIn(habit.id)}
+                    className="border-amber data-[state=checked]:bg-amber data-[state=checked]:border-amber"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-sm ${completed ? 'text-muted-foreground line-through' : ''}`}>
+                      {habit.title}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5">{goalTitle}</span>
+                  </div>
+                  {streak > 0 && (
+                    <span className="text-[10px] font-medium text-amber flex items-center gap-0.5 flex-shrink-0">
+                      <Flame className="h-3 w-3" />{streak}d
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Habit Heatmap */}
+      {todaysHabits.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <HabitHeatmap goals={goals} logs={habitLogs} />
+        </motion.div>
+      )}
+
+      {/* Due Soon */}
+      {dueSoonTodos.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }}>
+          <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Due Soon</p>
+              </div>
+              <Link to="/program" className="text-[10px] text-primary font-medium hover:underline">
+                View Program
+              </Link>
+            </div>
+            <div className="space-y-2">
+              {dueSoonTodos.map((todo) => (
+                <div key={todo.todoId} className="flex items-center gap-2.5">
+                  <Checkbox
+                    onCheckedChange={() => toggleToDo(todo.goalId, todo.phaseId, todo.taskId, todo.todoId)}
+                    className="border-border"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm">{todo.title}</span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5">{todo.goalTitle}</span>
+                  </div>
+                  <span className={`text-[10px] font-medium flex items-center gap-0.5 flex-shrink-0 ${getUrgencyColor(todo.days)}`}>
+                    <Clock className="h-3 w-3" />
+                    {todo.days < 0 ? `${Math.abs(todo.days)}d over` : todo.days === 0 ? 'today' : `${todo.days}d left`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Goal Progress Cards */}
+      {goals.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Goals</p>
+            <Link to="/goals" className="text-xs text-primary font-medium flex items-center gap-0.5 hover:underline">
+              View all <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {goals.filter(g => !g.archived).slice(0, 4).map(goal => {
+              const progress = calculateGoalProgress(goal);
+              return (
+                <Link key={goal.id} to="/goals">
+                  <div className="rounded-xl bg-card border border-border p-3 shadow-sm flex items-center gap-3 hover:bg-accent/30 transition-colors">
+                    <ProgressRing value={progress} size={36} strokeWidth={3} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{goal.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {goal.phases.length} phase{goal.phases.length !== 1 ? 's' : ''} — {progress}%
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       {/* Body Diagram */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <BodyDiagram prs={prs} />
       </motion.div>
     </div>
