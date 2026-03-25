@@ -391,9 +391,9 @@ RULES:
                     {ex.sets.map((set, setIdx) => (
                       <div key={setIdx} className="grid grid-cols-4 gap-2">
                         <span className="text-sm flex items-center font-bold text-primary">{setIdx + 1}</span>
-                        <Input type="number" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', Number(e.target.value))} className="h-8" />
-                        <Input type="number" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))} className="h-8" />
-                        <Input type="number" value={set.rpe} onChange={e => updateSet(exIdx, setIdx, 'rpe', Math.min(5, Math.max(1, Number(e.target.value))))} className="h-8" min={1} max={5} />
+                        <Input type="number" inputMode="decimal" value={set.weight || ''} onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value === '' ? 0 : Number(e.target.value))} className="h-8" />
+                        <Input type="number" inputMode="numeric" value={set.reps || ''} onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value === '' ? 0 : Number(e.target.value))} className="h-8" />
+                        <Input type="number" inputMode="numeric" value={set.rpe || ''} onChange={e => updateSet(exIdx, setIdx, 'rpe', e.target.value === '' ? 0 : Number(e.target.value))} onBlur={e => { const v = Number(e.target.value); updateSet(exIdx, setIdx, 'rpe', Math.min(5, Math.max(1, v || 3))); }} className="h-8" min={1} max={5} />
                       </div>
                     ))}
                   </div>
@@ -673,23 +673,23 @@ RULES:
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Sets</label>
-                      <Input type="number" value={config.targetSets} onChange={e => updateConfig(config.exercise, { targetSets: Number(e.target.value) })} className="h-8 mt-1" min={1} max={10} />
+                      <Input type="number" inputMode="numeric" value={config.targetSets || ''} onChange={e => updateConfig(config.exercise, { targetSets: e.target.value === '' ? 0 : Number(e.target.value) })} className="h-8 mt-1" min={1} max={10} />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Weight</label>
-                      <Input type="number" value={config.currentWeight} onChange={e => updateConfig(config.exercise, { currentWeight: Number(e.target.value) })} className="h-8 mt-1" />
+                      <Input type="number" inputMode="decimal" value={config.currentWeight || ''} onChange={e => updateConfig(config.exercise, { currentWeight: e.target.value === '' ? 0 : Number(e.target.value) })} className="h-8 mt-1" />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Increment</label>
-                      <Input type="number" value={config.weightIncrement} onChange={e => updateConfig(config.exercise, { weightIncrement: Number(e.target.value) })} className="h-8 mt-1" step={2.5} />
+                      <Input type="number" inputMode="decimal" value={config.weightIncrement || ''} onChange={e => updateConfig(config.exercise, { weightIncrement: e.target.value === '' ? 0 : Number(e.target.value) })} className="h-8 mt-1" step={2.5} />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Min</label>
-                      <Input type="number" value={config.repRangeMin} onChange={e => updateConfig(config.exercise, { repRangeMin: Number(e.target.value) })} className="h-8 mt-1" />
+                      <Input type="number" inputMode="numeric" value={config.repRangeMin || ''} onChange={e => updateConfig(config.exercise, { repRangeMin: e.target.value === '' ? 0 : Number(e.target.value) })} className="h-8 mt-1" />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Rep Max</label>
-                      <Input type="number" value={config.repRangeMax} onChange={e => updateConfig(config.exercise, { repRangeMax: Number(e.target.value) })} className="h-8 mt-1" />
+                      <Input type="number" inputMode="numeric" value={config.repRangeMax || ''} onChange={e => updateConfig(config.exercise, { repRangeMax: e.target.value === '' ? 0 : Number(e.target.value) })} className="h-8 mt-1" />
                     </div>
                   </div>
                 </CardContent>
@@ -782,23 +782,23 @@ RULES:
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
                     <div>
                       <label className="text-[10px] text-muted-foreground uppercase">Starting Weight</label>
-                      <Input type="number" value={newExWeight} onChange={e => setNewExWeight(Number(e.target.value))} className="h-8 mt-0.5" />
+                      <Input type="number" inputMode="decimal" value={newExWeight || ''} onChange={e => setNewExWeight(e.target.value === '' ? 0 : Number(e.target.value))} className="h-8 mt-0.5" />
                     </div>
                     <div>
                       <label className="text-[10px] text-muted-foreground uppercase">Sets</label>
-                      <Input type="number" value={newExSets} onChange={e => setNewExSets(Number(e.target.value))} className="h-8 mt-0.5" min={1} max={10} />
+                      <Input type="number" inputMode="numeric" value={newExSets || ''} onChange={e => setNewExSets(e.target.value === '' ? 0 : Number(e.target.value))} className="h-8 mt-0.5" min={1} max={10} />
                     </div>
                     <div>
                       <label className="text-[10px] text-muted-foreground uppercase">Increment</label>
-                      <Input type="number" value={newExIncrement} onChange={e => setNewExIncrement(Number(e.target.value))} className="h-8 mt-0.5" step={2.5} />
+                      <Input type="number" inputMode="decimal" value={newExIncrement || ''} onChange={e => setNewExIncrement(e.target.value === '' ? 0 : Number(e.target.value))} className="h-8 mt-0.5" step={2.5} />
                     </div>
                     <div>
                       <label className="text-[10px] text-muted-foreground uppercase">Rep Min</label>
-                      <Input type="number" value={newExRepMin} onChange={e => setNewExRepMin(Number(e.target.value))} className="h-8 mt-0.5" />
+                      <Input type="number" inputMode="numeric" value={newExRepMin || ''} onChange={e => setNewExRepMin(e.target.value === '' ? 0 : Number(e.target.value))} className="h-8 mt-0.5" />
                     </div>
                     <div>
                       <label className="text-[10px] text-muted-foreground uppercase">Rep Max</label>
-                      <Input type="number" value={newExRepMax} onChange={e => setNewExRepMax(Number(e.target.value))} className="h-8 mt-0.5" />
+                      <Input type="number" inputMode="numeric" value={newExRepMax || ''} onChange={e => setNewExRepMax(e.target.value === '' ? 0 : Number(e.target.value))} className="h-8 mt-0.5" />
                     </div>
                   </div>
                 </div>

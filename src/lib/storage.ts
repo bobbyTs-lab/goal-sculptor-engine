@@ -20,6 +20,9 @@ const KEYS = {
   CUSTOM_EXERCISES: 'telos_custom_exercises',
   HABIT_LOGS: 'telos_habit_logs',
   GOAL_TEMPLATES: 'telos_goal_templates',
+  INTERACTIONS: 'telos_interactions',
+  COMMITMENTS: 'telos_commitments',
+  RELATIONSHIP_GOALS: 'telos_relationship_goals',
 } as const;
 
 // Repeatable Block Template
@@ -38,14 +41,49 @@ export interface RepeatableBlock {
 
 // Contact / Person
 export type RelationshipTag = 'family' | 'friend' | 'coworker' | 'mentor' | 'mentee' | 'partner' | 'acquaintance' | 'other';
+export type CircleRing = 'core' | 'close' | 'extended' | 'distant';
+export type InfluenceTag = 'energizer' | 'challenger' | 'supporter' | 'drainer' | 'neutral';
+export type InteractionType = 'call' | 'text' | 'hangout' | 'meeting';
+
+export interface Interaction {
+  id: string;
+  contactId: string;
+  date: string; // ISO date
+  type: InteractionType;
+  durationMinutes?: number;
+  energyAfter?: 1 | 2 | 3 | 4 | 5; // how you felt after
+  note?: string;
+}
+
+export interface Commitment {
+  id: string;
+  contactId: string;
+  text: string;
+  dueDate?: string;
+  completedAt?: string;
+  recurring?: 'weekly' | 'biweekly' | 'monthly';
+}
+
+export interface RelationshipGoal {
+  id: string;
+  contactId: string;
+  text: string;
+  targetDate?: string;
+  completedAt?: string;
+}
+
 export interface Contact {
   id: string;
   name: string;
   relationship: RelationshipTag;
+  circleRing: CircleRing;
+  influenceTag: InfluenceTag;
   phone?: string;
   email?: string;
   notes: string;
   plan: string; // goal/plan for this relationship
+  interactionGoalDays?: number; // e.g., 7 = want to connect weekly
+  photoUrl?: string;
   createdAt: string;
 }
 
@@ -85,6 +123,7 @@ export interface AppSettings {
   customQuotes: string[];
   bodyweight: number;
   ambientSoundEnabled: boolean;
+  goldTargets: Record<string, number>; // exercise ID → custom target (weight in lbs, or reps for pull_up)
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -92,6 +131,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   customQuotes: [],
   bodyweight: 180,
   ambientSoundEnabled: false,
+  goldTargets: {},
 };
 
 export interface WorkoutTemplate {
@@ -165,8 +205,28 @@ export const loadRepeatableBlocks = (): RepeatableBlock[] => load(KEYS.REPEATABL
 export const saveRepeatableBlocks = (blocks: RepeatableBlock[]) => save(KEYS.REPEATABLE_BLOCKS, blocks);
 
 // Contacts
-export const loadContacts = (): Contact[] => load(KEYS.CONTACTS, []);
+export const loadContacts = (): Contact[] => {
+  const raw = load<Contact[]>(KEYS.CONTACTS, []);
+  // Migrate old contacts missing new fields
+  return raw.map(c => ({
+    ...c,
+    circleRing: c.circleRing || 'distant' as CircleRing,
+    influenceTag: c.influenceTag || 'neutral' as InfluenceTag,
+  }));
+};
 export const saveContacts = (contacts: Contact[]) => save(KEYS.CONTACTS, contacts);
+
+// Interactions
+export const loadInteractions = (): Interaction[] => load(KEYS.INTERACTIONS, []);
+export const saveInteractions = (interactions: Interaction[]) => save(KEYS.INTERACTIONS, interactions);
+
+// Commitments
+export const loadCommitments = (): Commitment[] => load(KEYS.COMMITMENTS, []);
+export const saveCommitments = (commitments: Commitment[]) => save(KEYS.COMMITMENTS, commitments);
+
+// Relationship Goals
+export const loadRelationshipGoals = (): RelationshipGoal[] => load(KEYS.RELATIONSHIP_GOALS, []);
+export const saveRelationshipGoals = (goals: RelationshipGoal[]) => save(KEYS.RELATIONSHIP_GOALS, goals);
 
 // Custom Exercises
 export const loadCustomExercises = (): CustomExercise[] => load(KEYS.CUSTOM_EXERCISES, []);
@@ -205,6 +265,9 @@ export function exportAllData(): string {
     contacts: loadContacts(),
     customExercises: loadCustomExercises(),
     habitLogs: loadHabitLogs(),
+    interactions: loadInteractions(),
+    commitments: loadCommitments(),
+    relationshipGoals: loadRelationshipGoals(),
   }, null, 2);
 }
 
@@ -224,6 +287,9 @@ export function importAllData(data: Record<string, unknown>) {
   if (data.contacts) saveContacts(data.contacts as Contact[]);
   if (data.customExercises) saveCustomExercises(data.customExercises as CustomExercise[]);
   if (data.habitLogs) saveHabitLogs(data.habitLogs as HabitLog[]);
+  if (data.interactions) saveInteractions(data.interactions as Interaction[]);
+  if (data.commitments) saveCommitments(data.commitments as Commitment[]);
+  if (data.relationshipGoals) saveRelationshipGoals(data.relationshipGoals as RelationshipGoal[]);
 }
 
 // Clear all data

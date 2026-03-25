@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,12 +6,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Trash2, Quote, AlertTriangle, Weight, Flame } from 'lucide-react';
-import { exportAllData, importAllData, clearAllData, loadSettings, saveSettings } from '@/lib/storage';
+import { Download, Upload, Trash2, Quote, AlertTriangle, Weight, Flame, Target } from 'lucide-react';
+import { exportAllData, importAllData, clearAllData, loadSettings, saveSettings, loadCustomExercises } from '@/lib/storage';
+import { BUILT_IN_EXERCISE_IDS, EXERCISE_LABELS, CompoundExercise, CustomExercise } from '@/types/workout';
+import { getStandard } from '@/lib/strength-standards';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState(() => loadSettings());
+  const customExercises = useMemo(() => loadCustomExercises(), []);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [importText, setImportText] = useState('');
   const [showImport, setShowImport] = useState(false);
@@ -87,6 +90,88 @@ export default function SettingsPage() {
             <Input type="number" value={settings.bodyweight} onChange={e => updateSettings({ bodyweight: Number(e.target.value) })} className="w-32" min={50} max={500} />
           </div>
           <p className="text-xs text-muted-foreground">Used for strength standards comparison and 1RM calculations</p>
+        </CardContent>
+      </Card>
+
+      {/* Strength Goals */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" /> Strength Goals
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Set your personal targets for each lift. Leave blank to use bodyweight-based defaults (advanced level).
+          </p>
+          <div className="space-y-3">
+            {BUILT_IN_EXERCISE_IDS.map(ex => {
+              const defaultVal = getStandard(ex as CompoundExercise, 'advanced', settings.bodyweight);
+              const unit = ex === 'pull_up' ? 'reps' : 'lbs';
+              const customVal = settings.goldTargets?.[ex];
+              return (
+                <div key={ex} className="flex items-center gap-3">
+                  <Label className="w-36 text-sm">{EXERCISE_LABELS[ex as CompoundExercise]}</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    className="w-24"
+                    placeholder={String(defaultVal)}
+                    value={customVal || ''}
+                    onChange={e => {
+                      const val = e.target.value === '' ? undefined : Number(e.target.value);
+                      const next = { ...settings.goldTargets };
+                      if (val) {
+                        next[ex] = val;
+                      } else {
+                        delete next[ex];
+                      }
+                      updateSettings({ goldTargets: next });
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground w-8">{unit}</span>
+                </div>
+              );
+            })}
+          </div>
+          {customExercises.length > 0 && (
+            <>
+              <div className="border-t border-border pt-4 mt-4">
+                <p className="text-xs text-muted-foreground mb-3">
+                  Custom exercises — set a target so they contribute to the body diagram.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {customExercises.map((ce: CustomExercise) => {
+                  const unit = ce.equipment === 'bodyweight' ? 'reps' : 'lbs';
+                  const customVal = settings.goldTargets?.[ce.id];
+                  return (
+                    <div key={ce.id} className="flex items-center gap-3">
+                      <Label className="w-36 text-sm truncate" title={ce.name}>{ce.name}</Label>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        className="w-24"
+                        placeholder="Target"
+                        value={customVal || ''}
+                        onChange={e => {
+                          const val = e.target.value === '' ? undefined : Number(e.target.value);
+                          const next = { ...settings.goldTargets };
+                          if (val) {
+                            next[ce.id] = val;
+                          } else {
+                            delete next[ce.id];
+                          }
+                          updateSettings({ goldTargets: next });
+                        }}
+                      />
+                      <span className="text-xs text-muted-foreground w-8">{unit}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
