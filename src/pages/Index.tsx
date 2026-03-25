@@ -9,7 +9,7 @@ import { getTodaysHabits } from '@/lib/habits';
 import { Target, Dumbbell, Trophy, TrendingUp, Settings, Moon, Flame, CheckCircle2, ChevronRight, Clock, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BodyDiagram } from '@/components/BodyDiagram';
-import { loadSettings, loadAchievements, loadWeeklyPlan } from '@/lib/storage';
+import { loadSettings, loadAchievements, loadWeeklyPlan, loadCustomExercises } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,6 +32,8 @@ export default function Index() {
   const { sessions } = useWorkouts();
   const { logs: habitLogs, toggleCheckIn } = useHabits();
   const prs = getPersonalRecords(sessions);
+  const customExercises = useMemo(() => loadCustomExercises(), []);
+  const settings = useMemo(() => loadSettings(), []);
   const weeklyVolume = getWeeklyVolume(sessions);
   const latestVolume = weeklyVolume[weeklyVolume.length - 1]?.volume || 0;
   const unlockedAchievements = loadAchievements();
@@ -97,7 +99,7 @@ export default function Index() {
           <div className="rounded-xl bg-card border border-border p-5 shadow-sm text-center space-y-3">
             <Target className="h-8 w-8 mx-auto text-primary" />
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Welcome to Telos</h2>
+              <h2 className="text-lg font-semibold text-foreground">Welcome to TELOS</h2>
               <p className="text-sm text-muted-foreground mt-1">Start by creating a goal or setting up your weekly program.</p>
             </div>
             <div className="flex gap-2 justify-center">
@@ -289,7 +291,7 @@ export default function Index() {
 
       {/* Body Diagram */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-        <BodyDiagram prs={prs} />
+        <BodyDiagram prs={prs} customExercises={customExercises} bodyweight={settings.bodyweight} goldTargets={settings.goldTargets} />
       </motion.div>
     </div>
   );

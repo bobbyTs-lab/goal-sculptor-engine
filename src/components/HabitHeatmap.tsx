@@ -12,13 +12,12 @@ export function HabitHeatmap({ goals, logs }: Props) {
   const activeHabits = useMemo(() => getAllActiveHabits(goals), [goals]);
   const habitCount = activeHabits.length;
 
-  const { cells, months } = useMemo(() => {
-    if (habitCount === 0) return { cells: [], months: [] };
+  const { cells, months, numCols } = useMemo(() => {
+    if (habitCount === 0) return { cells: [], months: [], numCols: 0 };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const weeks = 13; // ~3 months
-    const totalDays = weeks * 7;
+    const weeks = 13;
 
     // Build a map of date → completions count
     const completionMap = new Map<string, number>();
@@ -27,46 +26,55 @@ export function HabitHeatmap({ goals, logs }: Props) {
       completionMap.set(log.date, (completionMap.get(log.date) || 0) + 1);
     }
 
-    // Generate cells from (totalDays-1) days ago to today
+    // Align to actual week boundaries (like GitHub's contribution graph)
+    // End on today, start on the Sunday (weeks) weeks ago
+    const endDate = new Date(today);
+    const startSunday = new Date(today);
+    startSunday.setDate(today.getDate() - (weeks * 7) + 1);
+    // Roll back to the nearest Sunday
+    startSunday.setDate(startSunday.getDate() - startSunday.getDay());
+
     const cells: { date: string; count: number; col: number; row: number }[] = [];
     const monthLabels: { label: string; col: number }[] = [];
     let lastMonth = -1;
 
-    for (let i = totalDays - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
+    const d = new Date(startSunday);
+    while (d <= endDate) {
       const key = d.toISOString().split('T')[0];
-      const dayOfWeek = d.getDay(); // 0=Sun
-      const col = Math.floor((totalDays - 1 - i) / 7);
+      const dayOfWeek = d.getDay(); // 0=Sun, row in the grid
+      const daysSinceStart = Math.round((d.getTime() - startSunday.getTime()) / 86400000);
+      const col = Math.floor(daysSinceStart / 7);
       const count = completionMap.get(key) || 0;
 
       cells.push({ date: key, count, col, row: dayOfWeek });
 
+      // Add month label on the first day of a new month (or first cell)
       if (d.getMonth() !== lastMonth) {
         lastMonth = d.getMonth();
-        // Only add label if it's at least 3 columns from the previous one to prevent overlap
-        const prevCol = monthLabels.length > 0 ? monthLabels[monthLabels.length - 1].col : -3;
-        if (col - prevCol >= 3) {
+        const prevCol = monthLabels.length > 0 ? monthLabels[monthLabels.length - 1].col : -4;
+        if (col - prevCol >= 4) {
           monthLabels.push({
             label: d.toLocaleDateString(undefined, { month: 'short' }),
             col,
           });
         }
       }
+
+      d.setDate(d.getDate() + 1);
     }
 
-    return { cells, months: monthLabels };
+    const maxCol = cells.length > 0 ? Math.max(...cells.map(c => c.col)) + 1 : 0;
+    return { cells, months: monthLabels, numCols: maxCol };
   }, [logs, habitCount]);
 
   if (habitCount === 0) return null;
 
   const cellSize = 12;
   const gap = 2;
-  const totalCols = 13;
   const totalRows = 7;
   const leftPad = 20;
   const topPad = 16;
-  const width = leftPad + totalCols * (cellSize + gap);
+  const width = leftPad + numCols * (cellSize + gap);
   const height = topPad + totalRows * (cellSize + gap);
 
   const getColor = (count: number) => {

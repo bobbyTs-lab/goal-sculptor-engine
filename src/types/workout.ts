@@ -16,11 +16,11 @@ export type EquipmentType = 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'body
 
 export type MuscleGroup =
   | 'chest' | 'back' | 'shoulders' | 'biceps' | 'triceps'
-  | 'quads' | 'hamstrings' | 'glutes' | 'calves' | 'core' | 'forearms' | 'traps';
+  | 'quads' | 'hamstrings' | 'glutes' | 'calves' | 'core' | 'forearms' | 'traps' | 'neck';
 
 export const ALL_MUSCLE_GROUPS: MuscleGroup[] = [
   'chest', 'back', 'shoulders', 'biceps', 'triceps',
-  'quads', 'hamstrings', 'glutes', 'calves', 'core', 'forearms', 'traps',
+  'quads', 'hamstrings', 'glutes', 'calves', 'core', 'forearms', 'traps', 'neck',
 ];
 
 export interface CustomExercise {
